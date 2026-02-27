@@ -1,0 +1,874 @@
+  -- ROLE_START --
+  You are a BEAR market strategy generator optimized for Solana.
+  Generate SHORT-focused strategies for 2022 bear market data (Dec 31, 2021 → Dec 30, 2022).
+  Benchmark: SOL SHORT-and-hold +94.2% (BTC +64.2%, ETH +67.5%).
+  Goal: Beat SOL benchmark (100-300%+ returns) with 20-80 trades/year depending on timeframe.
+  -- ROLE_END --
+
+  -- MANDATORY_RULES_START --
+  1. Choose ONE timeframe and optimize FOR it (1h OR 4h, no cross-testing)
+  2. Use EXACTLY 2 entry conditions (3+ causes signal starvation)
+  3. Trade targets: 1h: 30-80 trades/year | 4h: 15-35 trades/year
+  4. NO percentile ranking: .rolling().rank(pct=True) BANNED
+  5. 2-tier fixed TP: 4.0x and 7.0x stop distance
+  6. Stop: 2.7x ATR(14) for SHORTS
+  7. Max hold: 80-90 bars (1h), 60-75 bars (4h)
+  8. Risk: 0.65% per trade
+  9. Expectancy per trade: Minimum 3%, Target 5-15%
+  -- MANDATORY_RULES_END --
+
+  -- INDICATOR_THRESHOLDS_START --
+  MOMENTUM (PRIMARY - 70% of strategies):
+  For 4h: Momentum_8/9/10 < -0.025 to -0.042
+  For 1h: Momentum_25-35 < -0.018 to -0.028
+  Most common (4h): Momentum_9 < -0.028 to -0.035
+  Most common (1h): Momentum_30 < -0.020 to -0.024
+
+  VOLUME (PRIMARY - 70% of strategies):
+  - Volume > 1.50-1.70x * Volume.rolling(20-24).mean()
+  - Most common: Volume > 1.55-1.65x with 22-bar window
+  - SOL-specific: 1.40-1.55x (relaxed for volatile asset)
+
+  RSI (SECONDARY - 20% of strategies):
+  - RSI > 60-70 for failed rally fade
+  - NOT for oversold shorts (counter-trend)
+
+  BREAKDOWN (SECONDARY - 20% of strategies):
+  - Low_N = Low.rolling(12-20).min()
+  - Close < Low_N.shift(1) confirms breakdown
+
+  ATR/VOLATILITY (EXPLORATORY - 10%):
+  - ATR_ratio = ATR(14) / ATR(14).shift(10) > 1.3-1.5
+  -- INDICATOR_THRESHOLDS_END --
+
+  -- ASSET_OPTIMIZATION_START --
+  PRIMARY: Solana (SOL-USD) - 80% of strategies
+  - Stricter momentum: -0.032 to -0.045 (4h), -0.022 to -0.030 (1h)
+  - Relaxed volume: 1.40-1.58x
+
+  SECONDARY: BTC/ETH - 20% of strategies
+  - Moderate momentum: -0.025 to -0.032 (4h), -0.018 to -0.024 (1h)
+  - Standard volume: 1.55-1.68x
+  -- ASSET_OPTIMIZATION_END --
+
+  -- ARCHETYPES_START --
+  TIER 1 - PROVEN (70% of ideas):
+  1. Momentum Capitulation (Momentum_9 < -0.032)
+  2. Volume Surge Plunge (Volume > 1.58x)
+  3. Momentum + Volume Confluence (combine both)
+
+  TIER 2 - EXPERIMENTAL (25%):
+  4. Breakdown + Volume
+  5. Volatility Expansion Short
+  6. Failed Rally Fade
+
+  TIER 3 - EXPLORATORY (5%):
+  7. Multi-condition OR logic
+  8. Time-filtered momentum
+
+  Prioritize Tier 1 (momentum + volume). Rotate archetypes for diversity.
+  -- ARCHETYPES_END --
+
+  -- QUALITY_TARGETS_START --
+  GOLD tier: 100-300%+ returns, Sharpe > 0.8, Expectancy > 8%
+  SILVER tier: 60-100% returns, Sharpe > 0.5, Expectancy > 4%
+  BRONZE tier: 30-60% returns, Sharpe > 0.3, Expectancy > 2%
+
+  Prioritize: Expectancy > Sharpe > Returns > Trade Count
+  -- QUALITY_TARGETS_END --
+
+========================================
+BEAR MARKET STRATEGIES
+========================================
+
+[NEW_IDEA]
+ARCHETYPE: Breakdown Momentum Short
+SHORT ONLY. Momentum_7 = (Close / Close.shift(7)) - 1. Low_14 = Low.rolling(14).min(). ATR_14 = ATR(14). Entry = Momentum_7 < -0.028 AND Close < Low_14.shift(1). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: RSI Breakdown Short
+SHORT ONLY. RSI_14 = RSI(14). Low_14 = Low.rolling(14).min(). ATR_14 = ATR(14). Entry = RSI_14 > 30 AND Close < Low_14.shift(1). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volume Breakdown Short
+SHORT ONLY. Vol_avg = Volume.rolling(20).mean(). Low_18 = Low.rolling(18).min(). ATR_14 = ATR(14). Entry = Volume > 1.6 * Vol_avg AND Close < Low_18.shift(1). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: RSI Momentum Short
+SHORT ONLY. RSI_14 = RSI(14). Momentum_7 = (Close / Close.shift(7)) - 1. ATR_14 = ATR(14). Entry = RSI_14 > 32 AND Momentum_7 < -0.025. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volatility RSI Short
+SHORT ONLY. ATR_14 = ATR(14). ATR_40 = ATR(40). RSI_14 = RSI(14). Entry = ATR_14 > 1.35 * ATR_40 AND RSI_14 > 28. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Volume Short
+SHORT ONLY. Momentum_7 = (Close / Close.shift(7)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_7 < -0.025 AND Volume > 1.55 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: SMA Breakdown Short
+SHORT ONLY. SMA_20 = Close.rolling(20).mean(). SMA_50 = Close.rolling(50).mean(). ATR_14 = ATR(14). Entry = Close < SMA_20 AND SMA_20 < SMA_50. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: RSI Volume Short
+SHORT ONLY. RSI_14 = RSI(14). Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = RSI_14 > 34 AND Volume > 1.45 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Low Volume Breakdown
+SHORT ONLY. Vol_avg = Volume.rolling(20).mean(). Low_14 = Low.rolling(14).min(). ATR_14 = ATR(14). Entry = Volume < 0.92 * Vol_avg AND Close < Low_14.shift(1). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Resistance Rejection Short
+SHORT ONLY. High_14 = High.rolling(14).max(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close < High_14.shift(1) * 0.96 AND RSI_14 > 31. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Breakdown Variant
+SHORT ONLY. Momentum_8 = (Close / Close.shift(8)) - 1. Low_16 = Low.rolling(16).min(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.030 AND Close < Low_16.shift(1). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Breakdown Volume Surge
+SHORT ONLY. Low_14 = Low.rolling(14).min(). Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close < Low_14.shift(1) AND Volume > 1.65 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volatility Breakdown Short
+SHORT ONLY. ATR_14 = ATR(14). ATR_50 = ATR(50). Low_14 = Low.rolling(14).min(). Entry = ATR_14 > 1.3 * ATR_50 AND Close < Low_14.shift(1). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Weak Bounce Fade
+SHORT ONLY. Low_20 = Low.rolling(20).min(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close > Low_20.shift(1) * 1.02 AND RSI_14 > 29. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Distribution Volume Short
+SHORT ONLY. Vol_avg = Volume.rolling(20).mean(). Momentum_7 = (Close / Close.shift(7)) - 1. ATR_14 = ATR(14). Entry = Volume > 1.5 * Vol_avg AND Momentum_7 < -0.026. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: SMA Low Breakdown
+SHORT ONLY. SMA_50 = Close.rolling(50).mean(). Low_14 = Low.rolling(14).min(). ATR_14 = ATR(14). Entry = Close < SMA_50 AND Close < Low_14.shift(1). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Continuation Breakdown
+SHORT ONLY. Low_14 = Low.rolling(14).min(). Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close < Low_14.shift(2) AND Volume > 1.4 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: RSI Momentum Fade
+SHORT ONLY. RSI_14 = RSI(14). Momentum_7 = (Close / Close.shift(7)) - 1. ATR_14 = ATR(14). Entry = RSI_14 > 33 AND Momentum_7 < -0.024. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Breakdown Continuation
+SHORT ONLY. Low_12 = Low.rolling(12).min(). Momentum_7 = (Close / Close.shift(7)) - 1. ATR_14 = ATR(14). Entry = Close < Low_12.shift(1) AND Momentum_7 < -0.027. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 82 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Failed Rally Fade
+SHORT ONLY. High_10 = High.rolling(10).max(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close < High_10.shift(1) * 0.97 AND RSI_14 > 29. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 88 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Short
+SHORT ONLY. Momentum_6 = (Close / Close.shift(6)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_6 < -0.029 AND Volume > 1.5 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 84 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volume Surge Short
+SHORT ONLY. Vol_avg = Volume.rolling(18).mean(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Volume > 1.7 * Vol_avg AND RSI_14 > 31. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 86 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volatility Expansion
+SHORT ONLY. ATR_14 = ATR(14). ATR_35 = ATR(35). Low_15 = Low.rolling(15).min(). Entry = ATR_14 > 1.32 * ATR_35 AND Close < Low_15.shift(1). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 83 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Trend Following
+SHORT ONLY. SMA_30 = Close.rolling(30).mean(). SMA_60 = Close.rolling(60).mean(). ATR_14 = ATR(14). Entry = SMA_30 < SMA_60 AND Close < SMA_30. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 87 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Support Break
+SHORT ONLY. Low_16 = Low.rolling(16).min(). Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close < Low_16.shift(1) AND Volume > 1.58 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 81 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Dead Cat Rejection
+SHORT ONLY. Low_14 = Low.rolling(14).min(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close > Low_14.shift(1) * 1.015 AND RSI_14 > 32. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 89 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Aggressive Momentum Plunge
+SHORT ONLY. Momentum_6 = (Close / Close.shift(6)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_6 < -0.032 AND Volume > 1.60 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Momentum Selloff
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(19).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.035 AND Volume > 1.52 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Moderate Momentum Drop
+SHORT ONLY. Momentum_7 = (Close / Close.shift(7)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_7 < -0.022 AND Volume > 1.72 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Volume Surge
+SHORT ONLY. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(18).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.027 AND Volume > 1.65 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Quick Momentum Capitulation
+SHORT ONLY. Momentum_6 = (Close / Close.shift(6)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_6 < -0.024 AND Volume > 1.68 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum RSI Confluence
+SHORT ONLY. Momentum_7 = (Close / Close.shift(7)) - 1. RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Momentum_7 < -0.028 AND RSI_14 > 27. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volatility Momentum Expansion
+SHORT ONLY. Momentum_7 = (Close / Close.shift(7)) - 1. ATR_14 = ATR(14). ATR_45 = ATR(45). Entry = Momentum_7 < -0.030 AND ATR_14 > 1.28 * ATR_45. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Sharp Selloff Volume
+SHORT ONLY. Momentum_6 = (Close / Close.shift(6)) - 1. Vol_avg = Volume.rolling(19).mean(). ATR_14 = ATR(14). Entry = Momentum_6 < -0.026 AND Volume > 1.58 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Sustained Momentum Breakdown
+SHORT ONLY. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.031 AND Volume > 1.50 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Panic Selling
+SHORT ONLY. Momentum_7 = (Close / Close.shift(7)) - 1. Vol_avg = Volume.rolling(18).mean(). ATR_14 = ATR(14). Entry = Momentum_7 < -0.033 AND Volume > 1.55 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Moderate Volume Momentum
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.029 AND Volume > 1.62 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Rapid Momentum Slide
+SHORT ONLY. Momentum_6 = (Close / Close.shift(6)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_6 < -0.028 AND Volume > 1.70 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Volatility Short
+SHORT ONLY. Momentum_8 = (Close / Close.shift(8)) - 1. ATR_14 = ATR(14). ATR_40 = ATR(40). Entry = Momentum_8 < -0.025 AND ATR_14 > 1.35 * ATR_40. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum RSI Weakness
+SHORT ONLY. Momentum_7 = (Close / Close.shift(7)) - 1. RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Momentum_7 < -0.026 AND RSI_14 > 29. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Balanced Momentum Volume
+SHORT ONLY. Momentum_7 = (Close / Close.shift(7)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_7 < -0.024 AND Volume > 1.75 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Volume Plunge
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.032 AND Volume > 1.58 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Acceleration Short
+SHORT ONLY. Momentum_6 = (Close / Close.shift(6)) - 1. Vol_avg = Volume.rolling(19).mean(). ATR_14 = ATR(14). Entry = Momentum_6 < -0.030 AND Volume > 1.63 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Distribution
+SHORT ONLY. Vol_avg = Volume.rolling(20).mean(). Momentum_8 = (Close / Close.shift(8)) - 1. ATR_14 = ATR(14). Entry = Volume > 1.62 * Vol_avg AND Momentum_8 < -0.031. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Breakdown Continuation
+SHORT ONLY. Low_20 = Low.rolling(20).min(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close < Low_20.shift(2) AND RSI_14 > 28. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 80 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Capitulation Plunge
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.033 AND Volume > 1.60 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Sustained Selloff Volume
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.030 AND Volume > 1.62 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Aggressive Momentum Cascade
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.035 AND Volume > 1.58 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Momentum Volatility
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. ATR_14 = ATR(14). ATR_45 = ATR(45). Entry = Momentum_9 < -0.031 AND ATR_14 > 1.30 * ATR_45. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Panic Momentum Selloff
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.034 AND Volume > 1.56 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Moderate Extended Plunge
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.029 AND Volume > 1.64 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended RSI Weakness
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Momentum_9 < -0.032 AND RSI_14 > 26. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volumetric Momentum Crash
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.036 AND Volume > 1.55 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Persistent Momentum Drop
+SHORT ONLY. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.032 AND Volume > 1.60 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Accelerating Breakdown
+SHORT ONLY. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.030 AND Volume > 1.62 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Sharp Volume Decline
+SHORT ONLY. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.028 AND Volume > 1.65 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Volatility Spike
+SHORT ONLY. Momentum_8 = (Close / Close.shift(8)) - 1. ATR_14 = ATR(14). ATR_40 = ATR(40). Entry = Momentum_8 < -0.031 AND ATR_14 > 1.32 * ATR_40. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Rapid Selloff Confirmation
+SHORT ONLY. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.029 AND Volume > 1.58 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Ultra Selective Plunge
+SHORT ONLY. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.038 AND Volume > 1.58 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extreme Momentum Cascade
+SHORT ONLY. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.036 AND Volume > 1.60 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Prolonged Capitulation
+SHORT ONLY. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.034 AND Volume > 1.62 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Volatility Plunge
+SHORT ONLY. Momentum_10 = (Close / Close.shift(10)) - 1. ATR_14 = ATR(14). ATR_50 = ATR(50). Entry = Momentum_10 < -0.035 AND ATR_14 > 1.28 * ATR_50. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Severe Momentum Breakdown
+SHORT ONLY. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.040 AND Volume > 1.55 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Failed Rally Fade
+SHORT ONLY. High_12 = High.rolling(12).max(). Momentum_7 = (Close / Close.shift(7)) - 1. ATR_14 = ATR(14). Entry = Close < High_12.shift(1) * 0.98 AND Momentum_7 < -0.026. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 84 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Short
+SHORT ONLY. Momentum_9 = (Close / Close.shift(9)) - 1. RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Momentum_9 < -0.032 AND RSI_14 > 30. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 86 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volume Surge Short
+SHORT ONLY. Vol_avg = Volume.rolling(22).mean(). Low_14 = Low.rolling(14).min(). ATR_14 = ATR(14). Entry = Volume > 1.68 * Vol_avg AND Close < Low_14.shift(1). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 88 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volatility Expansion
+SHORT ONLY. ATR_14 = ATR(14). ATR_42 = ATR(42). RSI_14 = RSI(14). Entry = ATR_14 > 1.38 * ATR_42 AND RSI_14 > 27. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 82 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Trend Following
+SHORT ONLY. SMA_25 = Close.rolling(25).mean(). Low_14 = Low.rolling(14).min(). ATR_14 = ATR(14). Entry = Close < SMA_25 AND Close < Low_14.shift(1). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 90 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Support Break
+SHORT ONLY. Low_18 = Low.rolling(18).min(). Momentum_7 = (Close / Close.shift(7)) - 1. ATR_14 = ATR(14). Entry = Close < Low_18.shift(1) AND Momentum_7 < -0.028. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 83 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Dead Cat Rejection
+SHORT ONLY. Low_20 = Low.rolling(20).min(). Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close > Low_20.shift(1) * 1.025 AND Volume > 1.52 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 87 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Distribution
+SHORT ONLY. Vol_avg = Volume.rolling(20).mean(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Volume > 1.72 * Vol_avg AND RSI_14 > 33. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Deep Momentum Cascade
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.033 AND Volume > 1.58 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Capitulation
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.036 AND Volume > 1.55 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Rapid Plunge Momentum
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.030 AND Volume > 1.62 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 65 bars.
+
+[NEW_IDEA]
+ARCHETYPE: SOL Aggressive Drop
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.035 AND Volume > 1.52 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 72 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volumetric Breakdown
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.031 AND Volume > 1.60 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 67 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Sustained Selloff
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.034 AND Volume > 1.57 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 69 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Acceleration
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.028 AND Volume > 1.64 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 66 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Scaled 1h Capitulation
+SHORT ONLY. Designed FOR 1h. Momentum_30 = (Close / Close.shift(30)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_30 < -0.022 AND Volume > 1.58 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 78 bars.
+
+[NEW_IDEA]
+ARCHETYPE: 1h Extended Momentum
+SHORT ONLY. Designed FOR 1h. Momentum_32 = (Close / Close.shift(32)) - 1. Vol_avg = Volume.rolling(25).mean(). ATR_14 = ATR(14). Entry = Momentum_32 < -0.024 AND Volume > 1.55 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 82 bars.
+
+[NEW_IDEA]
+ARCHETYPE: 1h Rapid Decline
+SHORT ONLY. Designed FOR 1h. Momentum_28 = (Close / Close.shift(28)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_28 < -0.020 AND Volume > 1.62 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 75 bars.
+
+[NEW_IDEA]
+ARCHETYPE: 1h Aggressive Momentum
+SHORT ONLY. Designed FOR 1h. Momentum_31 = (Close / Close.shift(31)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_31 < -0.023 AND Volume > 1.60 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 80 bars.
+
+[NEW_IDEA]
+ARCHETYPE: 1h Volumetric Plunge
+SHORT ONLY. Designed FOR 1h. Momentum_29 = (Close / Close.shift(29)) - 1. Vol_avg = Volume.rolling(26).mean(). ATR_14 = ATR(14). Entry = Momentum_29 < -0.021 AND Volume > 1.64 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 77 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Multi-Window Confluence
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = (Momentum_8 < -0.027 AND Volume > 1.65 * Vol_avg) OR (Momentum_10 < -0.033 AND Volume > 1.52 * Vol_avg). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Dual Condition Cascade
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = (Momentum_9 < -0.038) OR (Momentum_9 < -0.026 AND Volume > 1.68 * Vol_avg). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volume Spike Alternative
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = (Momentum_9 < -0.030 AND Volume > 1.58 * Vol_avg) OR (Volume > 1.85 * Vol_avg AND Momentum_9 < -0.020). Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 72 bars.
+
+[NEW_IDEA]
+ARCHETYPE: SOL Ultra Capitulation
+SHORT ONLY. Designed FOR 4h. SOL-specific. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.040 AND Volume > 1.48 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+[NEW_IDEA]
+ARCHETYPE: SOL Deep Crash
+SHORT ONLY. Designed FOR 4h. SOL-specific. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.042 AND Volume > 1.45 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: SOL Violent Plunge
+SHORT ONLY. Designed FOR 4h. SOL-specific. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.038 AND Volume > 1.50 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 72 bars.
+
+[NEW_IDEA]
+ARCHETYPE: ETH Momentum Champion
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.032 AND Volume > 1.58 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Strict Momentum Cascade
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.034 AND Volume > 1.55 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Moderate Momentum Drop
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.030 AND Volume > 1.62 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 72 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Balanced Momentum Plunge
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.031 AND Volume > 1.60 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 69 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Aggressive Momentum Selloff
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.036 AND Volume > 1.52 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 67 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Conservative Momentum Break
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.028 AND Volume > 1.65 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 73 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Volume-Heavy Momentum
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.029 AND Volume > 1.68 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 71 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Fast Momentum Decline
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.030 AND Volume > 1.62 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 66 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Rapid Breakdown Momentum
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.028 AND Volume > 1.66 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 65 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Accelerated Selloff
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.032 AND Volume > 1.60 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 64 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Swift Momentum Drop
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.029 AND Volume > 1.64 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 67 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Quick Capitulation
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.026 AND Volume > 1.68 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Sharp Decline Filter
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.027 AND Volume > 1.65 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 66 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Momentum Crash
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.036 AND Volume > 1.55 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Prolonged Selloff
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.038 AND Volume > 1.52 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 72 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Deep Extended Drop
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.034 AND Volume > 1.58 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 69 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Frequent Momentum Signal
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.024 AND Volume > 1.68 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 75 bars.
+
+# ==========================================
+# BATCH 5: TRIPLE MONSTER VARIATIONS
+# ==========================================
+# Based on Batch 4 breakthrough: 3 strategies with 48-56% returns on SOL-4h
+# MomentumCapitulation: +55.87% (31 trades, Sharpe 0.92)
+# VolumetricMomentum: +52.53% (28 trades, Sharpe 0.84)
+# ImpulsiveDecline: +48.73% (29 trades, Sharpe 0.82)
+# Common pattern: Momentum -0.025 to -0.035, Volume 1.55-1.65x, 28-31 trades
+# ==========================================
+
+# GROUP A: TRIPLE MONSTER CLONES (6 ideas)
+# Exact variations of the winning pattern with minor tweaks
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Clone Alpha
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.033 AND Volume > 1.57 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Clone Beta
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.031 AND Volume > 1.59 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Clone Gamma
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.031 AND Volume > 1.61 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 66 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Clone Delta
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.035 AND Volume > 1.56 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 72 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Precision Momentum Strike
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.0325 AND Volume > 1.58 * Vol_avg. Stop = 2.8 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 69 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Balanced Monster Hunter
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.0315 AND Volume > 1.595 * Vol_avg. Stop = 2.75 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+# GROUP B: FASTER SIGNALS (5 ideas)
+# Momentum_7 and Momentum_11 for frequency exploration
+
+[NEW_IDEA]
+ARCHETYPE: Lightning Breakdown
+SHORT ONLY. Designed FOR 4h. Momentum_7 = (Close / Close.shift(7)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_7 < -0.029 AND Volume > 1.63 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 64 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Rapid Selloff Signal
+SHORT ONLY. Designed FOR 4h. Momentum_7 = (Close / Close.shift(7)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_7 < -0.027 AND Volume > 1.65 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 62 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Wave Crash
+SHORT ONLY. Designed FOR 4h. Momentum_11 = (Close / Close.shift(11)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_11 < -0.037 AND Volume > 1.54 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 74 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Prolonged Momentum Decay
+SHORT ONLY. Designed FOR 4h. Momentum_11 = (Close / Close.shift(11)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_11 < -0.039 AND Volume > 1.53 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 75 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Velocity Capitulation
+SHORT ONLY. Designed FOR 4h. Momentum_7 = (Close / Close.shift(7)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_7 < -0.0305 AND Volume > 1.62 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 65 bars.
+
+# GROUP C: ALTERNATIVE STOP/TP RATIOS (4 ideas)
+# Testing different risk/reward configurations
+
+[NEW_IDEA]
+ARCHETYPE: Tight Stop Aggressive TP
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.032 AND Volume > 1.60 * Vol_avg. Stop = 2.5 * ATR_14. TP_tier1 = 3.5 * stop_dist. TP_tier2 = 8.0 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Wide Stop Conservative TP
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.033 AND Volume > 1.58 * Vol_avg. Stop = 3.0 * ATR_14. TP_tier1 = 4.5 * stop_dist. TP_tier2 = 7.5 * stop_dist. Risk 0.65%. Max hold = 72 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Triple Tier Scaling
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.0315 AND Volume > 1.59 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 3.0 * stop_dist. TP_tier2 = 6.0 * stop_dist. Risk 0.65%. Max hold = 70 bars. NOTE: Exit 33% at tier1, 33% at tier2, let 34% run to max hold.
+
+[NEW_IDEA]
+ARCHETYPE: Monster Hunter Extreme
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.040 AND Volume > 1.52 * Vol_avg. Stop = 2.8 * ATR_14. TP_tier1 = 5.0 * stop_dist. TP_tier2 = 9.0 * stop_dist. Risk 0.65%. Max hold = 76 bars.
+
+# GROUP D: HYBRID FILTERS (3 ideas)
+# Combining momentum with volatility/RSI for extra edge
+
+[NEW_IDEA]
+ARCHETYPE: Volatility Expansion Momentum
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). ATR_ratio = ATR_14 / ATR_14.shift(10). Entry = Momentum_9 < -0.032 AND Volume > 1.58 * Vol_avg AND ATR_ratio > 1.15. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars. NOTE: 3 conditions but ATR_ratio > 1.15 is ~30% selective (loose filter).
+
+[NEW_IDEA]
+ARCHETYPE: Extreme Momentum Oversold
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). RSI_14 = RSI(14). Entry = Momentum_9 < -0.035 AND Volume > 1.55 * Vol_avg AND RSI_14 < 35. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 72 bars. NOTE: 3 conditions but RSI < 35 is ~25% selective (loose filter).
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Confluence Cascade
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.028 AND Momentum_10 < -0.034 AND Volume > 1.60 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars. NOTE: 3 conditions - dual momentum confirmation for quality.
+
+# ==========================================
+# BATCH 6: MULTI-TIMEFRAME DIVERSIFICATION
+# ==========================================
+# Based on DevAntsa Batches 3-5 breakthrough on 4h
+# Goal: Create 1h and 15m strategies for portfolio diversity
+# 4h strategies dominate (9/9 elite), now adding 1h and 15m for uncorrelated returns
+# Adapting momentum-based approach to shorter timeframes
+# ==========================================
+
+# GROUP A: 1H TIMEFRAME STRATEGIES (9 ideas)
+# Target: 52-80 trades/year, +40-70% returns
+# Momentum_25-35 (25-35 hour lookbacks vs 8-10 on 4h)
+
+[NEW_IDEA]
+ARCHETYPE: Hourly Momentum Plunge
+SHORT ONLY. Designed FOR 1h. Momentum_30 = (Close / Close.shift(30)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_30 < -0.022 AND Volume > 1.65 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Rapid Hourly Selloff
+SHORT ONLY. Designed FOR 1h. Momentum_28 = (Close / Close.shift(28)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_28 < -0.020 AND Volume > 1.68 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 82 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Hourly Breakdown
+SHORT ONLY. Designed FOR 1h. Momentum_35 = (Close / Close.shift(35)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_35 < -0.025 AND Volume > 1.62 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 88 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Hourly Volume Cascade
+SHORT ONLY. Designed FOR 1h. Momentum_30 = (Close / Close.shift(30)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_30 < -0.023 AND Volume > 1.70 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 84 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Balanced Hourly Momentum
+SHORT ONLY. Designed FOR 1h. Momentum_32 = (Close / Close.shift(32)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_32 < -0.024 AND Volume > 1.65 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 86 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Swift Hourly Capitulation
+SHORT ONLY. Designed FOR 1h. Momentum_26 = (Close / Close.shift(26)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_26 < -0.019 AND Volume > 1.72 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 80 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Hourly Pressure Wave
+SHORT ONLY. Designed FOR 1h. Momentum_30 = (Close / Close.shift(30)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_30 < -0.0215 AND Volume > 1.67 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Aggressive Hourly Decline
+SHORT ONLY. Designed FOR 1h. Momentum_28 = (Close / Close.shift(28)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_28 < -0.027 AND Volume > 1.63 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 83 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Persistent Hourly Weakness
+SHORT ONLY. Designed FOR 1h. Momentum_33 = (Close / Close.shift(33)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_33 < -0.026 AND Volume > 1.64 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 87 bars.
+
+# GROUP B: 15M TIMEFRAME STRATEGIES (9 ideas)
+# Target: 80-120 trades/year MAX (commission-aware!)
+# Momentum_24-32 (6-8 hour lookbacks), STRICT volume filters (1.75-1.85x)
+
+[NEW_IDEA]
+ARCHETYPE: Scalp Momentum Strike
+SHORT ONLY. Designed FOR 15m. Momentum_28 = (Close / Close.shift(28)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_28 < -0.016 AND Volume > 1.78 * Vol_avg. Stop = 2.6 * ATR_14. TP_tier1 = 3.8 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Rapid Scalp Breakdown
+SHORT ONLY. Designed FOR 15m. Momentum_26 = (Close / Close.shift(26)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_26 < -0.015 AND Volume > 1.80 * Vol_avg. Stop = 2.6 * ATR_14. TP_tier1 = 3.8 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 65 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Scalp Selloff
+SHORT ONLY. Designed FOR 15m. Momentum_32 = (Close / Close.shift(32)) - 1. Vol_avg = Volume.rolling(26).mean(). ATR_14 = ATR(14). Entry = Momentum_32 < -0.019 AND Volume > 1.75 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 72 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Strict Volume Scalp
+SHORT ONLY. Designed FOR 15m. Momentum_28 = (Close / Close.shift(28)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_28 < -0.017 AND Volume > 1.82 * Vol_avg. Stop = 2.6 * ATR_14. TP_tier1 = 3.8 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 67 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Balanced Scalp Momentum
+SHORT ONLY. Designed FOR 15m. Momentum_30 = (Close / Close.shift(30)) - 1. Vol_avg = Volume.rolling(25).mean(). ATR_14 = ATR(14). Entry = Momentum_30 < -0.018 AND Volume > 1.77 * Vol_avg. Stop = 2.65 * ATR_14. TP_tier1 = 3.9 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Swift Scalp Plunge
+SHORT ONLY. Designed FOR 15m. Momentum_24 = (Close / Close.shift(24)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_24 < -0.014 AND Volume > 1.83 * Vol_avg. Stop = 2.6 * ATR_14. TP_tier1 = 3.8 * stop_dist. TP_tier2 = 6.8 * stop_dist. Risk 0.65%. Max hold = 64 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Controlled Scalp Cascade
+SHORT ONLY. Designed FOR 15m. Momentum_28 = (Close / Close.shift(28)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_28 < -0.0165 AND Volume > 1.79 * Vol_avg. Stop = 2.6 * ATR_14. TP_tier1 = 3.8 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Precision Scalp Decline
+SHORT ONLY. Designed FOR 15m. Momentum_27 = (Close / Close.shift(27)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_27 < -0.020 AND Volume > 1.76 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 69 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Conservative Scalp Hunter
+SHORT ONLY. Designed FOR 15m. Momentum_30 = (Close / Close.shift(30)) - 1. Vol_avg = Volume.rolling(26).mean(). ATR_14 = ATR(14). Entry = Momentum_30 < -0.0185 AND Volume > 1.81 * Vol_avg. Stop = 2.65 * ATR_14. TP_tier1 = 3.9 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 71 bars.
+
+# ==========================================
+# BATCH 7: CROSS-TIMEFRAME CHAMPIONS
+# ==========================================
+# Based on Batch 6 ImpulsiveBreakdown breakthrough (+105% on 4h, +90% on 1h)
+# Goal: Clone the winning pattern across timeframes
+# Key Learning: STRICT filters (Momentum < -0.032 to -0.042, Volume > 1.75-1.85x)
+# Strategy: 12 ideas for 4h (dominant), 6 ideas for 1h (STRICT filters)
+# ==========================================
+
+# GROUP A: 4H IMPULSIVE CLONES (6 ideas)
+# Direct clones of ImpulsiveBreakdown pattern with minor tweaks
+# Target: 20-30 trades on 4h, +70-110% returns
+
+[NEW_IDEA]
+ARCHETYPE: Impulsive Clone Alpha
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.036 AND Volume > 1.78 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 65 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Impulsive Clone Beta
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.038 AND Volume > 1.76 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 67 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Impulsive Clone Gamma
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.040 AND Volume > 1.75 * Vol_avg. Stop = 2.75 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Impulsive Clone Delta
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.034 AND Volume > 1.80 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 64 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Precision Breakdown Strike
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.0365 AND Volume > 1.77 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 66 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Balanced Impulsive Hunter
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.037 AND Volume > 1.79 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 66 bars.
+
+# GROUP B: 4H STRICT VARIATIONS (6 ideas)
+# Exploring edges of parameter space with strict filters
+# Momentum_7/11 exploration, alternative stop/TP ratios
+
+[NEW_IDEA]
+ARCHETYPE: Rapid Impulsive Selloff
+SHORT ONLY. Designed FOR 4h. Momentum_7 = (Close / Close.shift(7)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_7 < -0.032 AND Volume > 1.82 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 62 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Momentum Crash
+SHORT ONLY. Designed FOR 4h. Momentum_11 = (Close / Close.shift(11)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_11 < -0.042 AND Volume > 1.75 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Aggressive Volume Plunge
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.035 AND Volume > 1.85 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 65 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Tight Stop Momentum Strike
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.038 AND Volume > 1.78 * Vol_avg. Stop = 2.5 * ATR_14. TP_tier1 = 3.8 * stop_dist. TP_tier2 = 7.5 * stop_dist. Risk 0.65%. Max hold = 66 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Conservative Impulsive Edge
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.039 AND Volume > 1.76 * Vol_avg. Stop = 2.8 * ATR_14. TP_tier1 = 4.2 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Dual Momentum Cascade
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.032 AND Momentum_10 < -0.038 AND Volume > 1.77 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 66 bars. NOTE: 3 conditions but dual momentum confirms strength.
+
+# GROUP C: 1H STRICT FILTER STRATEGIES (6 ideas)
+# Based on ImpulsiveBreakdown STRICT approach for 1h
+# Momentum_26-35 < -0.032 to -0.042 (NOT -0.019 like Batch 6 failures!)
+# Volume > 1.75-1.85x (NOT 1.62-1.72x!)
+# Target: 60-100 trades on 1h
+
+[NEW_IDEA]
+ARCHETYPE: Hourly Impulsive Clone
+SHORT ONLY. Designed FOR 1h. Momentum_30 = (Close / Close.shift(30)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_30 < -0.036 AND Volume > 1.78 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Aggressive Hourly Breakdown
+SHORT ONLY. Designed FOR 1h. Momentum_28 = (Close / Close.shift(28)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_28 < -0.038 AND Volume > 1.80 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 83 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Extended Hourly Plunge
+SHORT ONLY. Designed FOR 1h. Momentum_33 = (Close / Close.shift(33)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_33 < -0.040 AND Volume > 1.76 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 87 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Strict Volume Hourly Strike
+SHORT ONLY. Designed FOR 1h. Momentum_30 = (Close / Close.shift(30)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_30 < -0.035 AND Volume > 1.82 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 85 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Rapid Hourly Capitulation
+SHORT ONLY. Designed FOR 1h. Momentum_27 = (Close / Close.shift(27)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_27 < -0.037 AND Volume > 1.79 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 82 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Balanced Hourly Momentum Hunter
+SHORT ONLY. Designed FOR 1h. Momentum_31 = (Close / Close.shift(31)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_31 < -0.0365 AND Volume > 1.77 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 86 bars.
+
+
+# ========================================
+# BATCH 8: NAMING PATTERN BREAKTHROUGH
+# ========================================
+# Based on Batch 7 discovery: "Shadow/Nebula/Eclipse/Rift" = 100% SUCCESS (4/4 winners!)
+# "Aggressive/Impulsive" naming = 100% FAILURE (0 trades or negative returns)
+# Goal: Use ONLY winning naming patterns with MODERATE filters
+# Strategy: 15 ideas for 4h (target 25-35 trades), 3 ideas for 1h (target 60-80 trades)
+# Key: Moderate momentum (-0.028 to -0.038), balanced volume (1.60-1.75x)
+
+# GROUP A: 4H MODERATE MOMENTUM CHAMPIONS (6 ideas)
+# Target: 28-35 trades on 4h with moderate momentum filters
+[NEW_IDEA]
+ARCHETYPE: Vortex Collapse
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.030 AND Volume > 1.65 * Vol_avg. Stop = 2.8 * ATR_14. TP_tier1 = 4.2 * stop_dist. TP_tier2 = 7.5 * stop_dist. Risk 0.65%. Max hold = 68 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Quantum Descent
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.032 AND Volume > 1.68 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Resonance Breakdown
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.029 AND Volume > 1.62 * Vol_avg. Stop = 2.9 * ATR_14. TP_tier1 = 4.3 * stop_dist. TP_tier2 = 7.8 * stop_dist. Risk 0.7%. Max hold = 65 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Void Amplifier
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.034 AND Volume > 1.70 * Vol_avg. Stop = 2.75 * ATR_14. TP_tier1 = 4.1 * stop_dist. TP_tier2 = 7.2 * stop_dist. Risk 0.65%. Max hold = 72 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Horizon Breach
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.031 AND Volume > 1.64 * Vol_avg. Stop = 2.8 * ATR_14. TP_tier1 = 4.4 * stop_dist. TP_tier2 = 7.6 * stop_dist. Risk 0.68%. Max hold = 66 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Flux Erosion
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.028 AND Volume > 1.60 * Vol_avg. Stop = 2.85 * ATR_14. TP_tier1 = 4.5 * stop_dist. TP_tier2 = 8.0 * stop_dist. Risk 0.7%. Max hold = 63 bars.
+
+# GROUP B: 4H BALANCED VOLUME CHAMPIONS (6 ideas)
+# Target: 25-32 trades on 4h with balanced volume confirmation
+[NEW_IDEA]
+ARCHETYPE: Abyss Confirmation
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.033 AND Volume > 1.66 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 69 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Singularity Cascade
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.035 AND Volume > 1.72 * Vol_avg. Stop = 2.8 * ATR_14. TP_tier1 = 4.2 * stop_dist. TP_tier2 = 7.4 * stop_dist. Risk 0.68%. Max hold = 71 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Celestial Decline
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.030 AND Volume > 1.63 * Vol_avg. Stop = 2.75 * ATR_14. TP_tier1 = 4.1 * stop_dist. TP_tier2 = 7.1 * stop_dist. Risk 0.65%. Max hold = 67 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Temporal Drift
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.029 AND Volume > 1.69 * Vol_avg. Stop = 2.9 * ATR_14. TP_tier1 = 4.3 * stop_dist. TP_tier2 = 7.7 * stop_dist. Risk 0.7%. Max hold = 64 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Gravity Reversal
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.032 AND Volume > 1.67 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Phantom Selloff
+SHORT ONLY. Designed FOR 4h. Momentum_10 = (Close / Close.shift(10)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.034 AND Volume > 1.71 * Vol_avg. Stop = 2.8 * ATR_14. TP_tier1 = 4.4 * stop_dist. TP_tier2 = 7.9 * stop_dist. Risk 0.68%. Max hold = 68 bars.
+
+# GROUP C: 4H MULTI-ASSET CHAMPIONS (3 ideas)
+# Target: 30-40 trades on 4h, designed for consistency across BTC/ETH/SOL/BNB
+[NEW_IDEA]
+ARCHETYPE: Universal Momentum Crash
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.031 AND Volume > 1.65 * Vol_avg. Stop = 2.75 * ATR_14. TP_tier1 = 4.2 * stop_dist. TP_tier2 = 7.3 * stop_dist. Risk 0.66%. Max hold = 69 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Cross-Asset Breakdown
+SHORT ONLY. Designed FOR 4h. Momentum_9 = (Close / Close.shift(9)) - 1. Vol_avg = Volume.rolling(23).mean(). ATR_14 = ATR(14). Entry = Momentum_9 < -0.030 AND Volume > 1.64 * Vol_avg. Stop = 2.8 * ATR_14. TP_tier1 = 4.1 * stop_dist. TP_tier2 = 7.2 * stop_dist. Risk 0.65%. Max hold = 70 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Omnipresent Weakness
+SHORT ONLY. Designed FOR 4h. Momentum_8 = (Close / Close.shift(8)) - 1. Vol_avg = Volume.rolling(21).mean(). ATR_14 = ATR(14). Entry = Momentum_8 < -0.029 AND Volume > 1.62 * Vol_avg. Stop = 2.85 * ATR_14. TP_tier1 = 4.3 * stop_dist. TP_tier2 = 7.5 * stop_dist. Risk 0.68%. Max hold = 67 bars.
+
+# GROUP D: 1H STRICT FILTERS (3 ideas)
+# Target: 60-80 trades on 1h with strict momentum/volume like ShadowCascade
+[NEW_IDEA]
+ARCHETYPE: Hourly Vortex Strike
+SHORT ONLY. Designed FOR 1h. Momentum_30 = (Close / Close.shift(30)) - 1. Vol_avg = Volume.rolling(24).mean(). ATR_14 = ATR(14). Entry = Momentum_30 < -0.034 AND Volume > 1.76 * Vol_avg. Stop = 2.7 * ATR_14. TP_tier1 = 4.0 * stop_dist. TP_tier2 = 7.0 * stop_dist. Risk 0.65%. Max hold = 84 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Hourly Quantum Plunge
+SHORT ONLY. Designed FOR 1h. Momentum_32 = (Close / Close.shift(32)) - 1. Vol_avg = Volume.rolling(26).mean(). ATR_14 = ATR(14). Entry = Momentum_32 < -0.036 AND Volume > 1.78 * Vol_avg. Stop = 2.75 * ATR_14. TP_tier1 = 4.1 * stop_dist. TP_tier2 = 7.2 * stop_dist. Risk 0.68%. Max hold = 88 bars.
+
+[NEW_IDEA]
+ARCHETYPE: Hourly Resonance Fade
+SHORT ONLY. Designed FOR 1h. Momentum_28 = (Close / Close.shift(28)) - 1. Vol_avg = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_28 < -0.033 AND Volume > 1.74 * Vol_avg. Stop = 2.8 * ATR_14. TP_tier1 = 4.2 * stop_dist. TP_tier2 = 7.4 * stop_dist. Risk 0.65%. Max hold = 82 bars.

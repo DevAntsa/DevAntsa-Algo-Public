@@ -1,0 +1,418 @@
+-- BEAR_15M_HEADER_START --
+REGIME: Bear crypto markets, 15-minute timeframe, SHORT ONLY
+PRIMARY ASSET: BTC (no direction conflicts in live trading loop during bear regime)
+SECONDARY: ETH, SOL, BNB (for cross-validation, but BTC is deployment target)
+COMMISSION: 0.055% per trade (0.11% round-trip). Real friction with slippage: ~0.10% round-trip
+TARGET TRADES: 30-120 on ~35000 bars. Avg profit-per-trade MUST be >= 0.4%
+PROFIT TARGET: Fixed 1.0-1.5% per trade. Quick in, quick out.
+MAX HOLD: 30-50 bars (7.5-12.5 hours). Bear moves reverse fast on 15m.
+-- BEAR_15M_HEADER_END --
+
+-- EXPERT_DESIGN_PRINCIPLES_START --
+FROM LIVE TRADING LOOP OPERATOR (runs 8 strategies in production):
+1. 3+ entry conditions MINIMUM (2 is too loose on 15m — proven by 52 failed strategies)
+2. Quick profit capture: target 1-1.5% and get out. Bear moves reverse fast.
+3. Short max hold: 30-50 bars. If it hasn't worked by then, the move is over.
+4. ATR-based stops (1.5-2.0x ATR), NOT fixed percentages.
+5. NO trailing stop — 15m bear moves don't trend long enough for trails to help.
+6. NO multi-tier TP (TP1/TP2) — single fixed target, close entire position.
+7. Volume/momentum confirmation required on EVERY entry.
+8. Risk per trade: 0.35-0.50% (conservative for bear shorts).
+9. Strategy must be EXTREMELY SELECTIVE — only fire during real breakdowns.
+-- EXPERT_DESIGN_PRINCIPLES_END --
+
+-- WHAT_DOESNT_WORK_START --
+PROVEN FAILURES (Batches 1-3, 52 strategies tested):
+- "Overbought at premium" entries (RSI > 70 + Close > SMA) = 0/35 winners (Batch 1-2)
+- 2-condition entries on 15m = too loose, overtrading OR signal starvation (Batch 1-3)
+- Capitulation pattern with 2 conditions from 4h = 0/17 winners on 15m (Batch 3)
+- Multi-tier TP (4x/7x ATR) = holds too long, catches bounce-backs on 15m
+- Max hold 64-85 bars = too long for 15m bear moves
+- Stop 2.7x ATR = too wide for 15m fixed-target exits
+- Position size 0.5-0.6 = too large for 15m SHORT frequency
+- 200+ trades = commission kills all profit (7/17 Batch 3 strategies)
+- Close < Low(N) + Volume > 2.0x with only 2 conditions = 0 trades (signal starvation)
+-- WHAT_DOESNT_WORK_END --
+
+-- WHAT_WORKS_START --
+EXPERT-VALIDATED DESIGN (from live loop operator + 4h winner analysis):
+- 3+ conditions: structure break + momentum + volume/volatility confirmation
+- Fixed 1-1.5% profit target (quick capture, no holding for home runs)
+- Max hold 30-50 bars (7.5-12.5 hours)
+- Stop: 1.5-2.0x ATR (tighter than 4h, matching smaller target)
+- NO trailing stop, NO multi-tier TP
+- Risk: 0.35-0.50% per trade
+- BTC = primary target (free asset slot in bear regime in live loop)
+- Entry conditions from 3 categories: A) breakdown structure, B) momentum, C) volume/vol
+-- WHAT_WORKS_END --
+
+-- BATCH_1_BEAR_SHORT_START --
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Failed Rally at SMA50 Resistance
+SHORT ONLY. SMA_50 = Close.rolling(50).mean(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close > SMA_50 * 0.998 AND RSI_14 > 68. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Overbought RSI at Rolling High
+SHORT ONLY. High_20 = High.rolling(20).max(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close > High_20.shift(1) * 0.995 AND RSI_14 > 70. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.0 * (stop - entry). Size 0.55. Max hold 80 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Stochastic Overbought at VWAP Premium
+SHORT ONLY. VWAP_20 = VWAP(20). Stoch_K = Stochastic %K(14,3). ATR_14 = ATR(14). Entry = Close > VWAP_20 * 1.025 AND Stoch_K > 80. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Weak Momentum at EMA Resistance
+SHORT ONLY. EMA_20 = EMA(20). Momentum_10 = Close.pct_change(10). ATR_14 = ATR(14). Entry = Close > EMA_20 * 1.02 AND Momentum_10 < 0.02. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.5 * (stop - entry). Size 0.5. Max hold 85 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT RSI Overbought at VWAP Premium
+SHORT ONLY. VWAP_20 = VWAP(20). RSI_7 = RSI(7). ATR_14 = ATR(14). Entry = Close > VWAP_20 * 1.02 AND RSI_7 > 75. Stop = entry + 2.6 * ATR_14. TP1 = entry - 4.0 * (stop - entry). Size 0.55. Max hold 80 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Failed Rally at SMA100
+SHORT ONLY. SMA_100 = Close.rolling(100).mean(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close > SMA_100 * 0.995 AND RSI_14 > 65. Stop = entry + 3.0 * ATR_14. TP1 = entry - 5.0 * (stop - entry). Size 0.5. Max hold 90 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Breakdown Retest with RSI Rising
+SHORT ONLY. Low_20 = Low.rolling(20).min(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close < Low_20.shift(3) AND RSI_14 > 55. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.5 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Failed Retest of Broken Support
+SHORT ONLY. Support_25 = Low.rolling(25).min().shift(1). RSI_9 = RSI(9). ATR_14 = ATR(14). Entry = Close > Support_25 * 0.99 AND Close < Support_25 * 1.01 AND RSI_9 > 58. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). Size 0.55. Max hold 80 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Stochastic Extreme at SMA20
+SHORT ONLY. SMA_20 = Close.rolling(20).mean(). Stoch_K = Stochastic %K(12,3). ATR_14 = ATR(14). Entry = Close > SMA_20 * 1.015 AND Stoch_K > 82. Stop = entry + 2.6 * ATR_14. TP1 = entry - 4.0 * (stop - entry). Size 0.55. Max hold 80 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Weak Rally Momentum at EMA50
+SHORT ONLY. EMA_50 = EMA(50). Momentum_14 = Close.pct_change(14). ATR_14 = ATR(14). Entry = Close > EMA_50 * 0.998 AND Momentum_14 < 0.015. Stop = entry + 3.0 * ATR_14. TP1 = entry - 5.0 * (stop - entry). Size 0.5. Max hold 90 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT RSI Divergence at Rolling High
+SHORT ONLY. High_25 = High.rolling(25).max(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close > High_25.shift(1) * 0.99 AND RSI_14 > 65 AND RSI_14 < RSI_14.shift(5). Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.5 * (stop - entry). Size 0.5. Max hold 85 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Overbought Exhaustion Volume Decline
+SHORT ONLY. RSI_14 = RSI(14). Vol_ratio = Volume / Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = RSI_14 > 72 AND Vol_ratio < 0.85. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). Size 0.55. Max hold 80 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT VWAP Premium Weak Momentum
+SHORT ONLY. VWAP_25 = VWAP(25). Momentum_7 = Close.pct_change(7). ATR_14 = ATR(14). Entry = Close > VWAP_25 * 1.03 AND Momentum_7 < 0.025. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.5 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT WMA Premium RSI Overbought
+SHORT ONLY. WMA_20 = WMA(20). RSI_9 = RSI(9). ATR_14 = ATR(14). Entry = Close > WMA_20 * 1.02 AND RSI_9 > 72. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). Size 0.55. Max hold 80 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT SMA20 Rejection Stochastic
+SHORT ONLY. SMA_20 = Close.rolling(20).mean(). Stoch_K = Stochastic %K(14,3). ATR_14 = ATR(14). Entry = Close > SMA_20 * 1.01 AND Close < SMA_20 * 1.025 AND Stoch_K > 78. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT EMA Premium Fast RSI
+SHORT ONLY. EMA_25 = EMA(25). RSI_5 = RSI(5). ATR_14 = ATR(14). Entry = Close > EMA_25 * 1.025 AND RSI_5 > 78. Stop = entry + 2.6 * ATR_14. TP1 = entry - 4.0 * (stop - entry). Size 0.55. Max hold 80 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Below SMA50 Weak Bounce
+SHORT ONLY. SMA_50 = Close.rolling(50).mean(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close < SMA_50 * 0.97 AND RSI_14 > 55. Stop = entry + 3.0 * ATR_14. TP1 = entry - 5.0 * (stop - entry). Size 0.5. Max hold 90 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT MFI Overbought Rolling High
+SHORT ONLY. High_20 = High.rolling(20).max(). MFI_14 = MFI(14). ATR_14 = ATR(14). Entry = Close > High_20.shift(1) * 0.99 AND MFI_14 > 75. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.5 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-100 trades on ~5760 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+-- BATCH_2_BEAR_SHORT_START --
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Momentum Divergence at SMA50 Premium
+SHORT ONLY. SMA_50 = Close.rolling(50).mean(). RSI_14 = RSI(14). RSI_prev = RSI_14.shift(10). ATR_14 = ATR(14). Entry = Close > SMA_50 * 1.01 AND RSI_14 < RSI_prev AND RSI_14 > 65. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Divergent Rally at EMA20 Premium
+SHORT ONLY. EMA_20 = EMA(20). Momentum_12 = Close.pct_change(12). ATR_14 = ATR(14). Entry = Close > EMA_20 * 1.02 AND Momentum_12 < 0.01. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Weakening Rally at Rolling High
+SHORT ONLY. High_25 = High.rolling(25).max(). Momentum_14 = Close.pct_change(14). ATR_14 = ATR(14). Entry = Close > High_25.shift(1) * 0.99 AND Momentum_14 < 0.012. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.5 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.5. Max hold 90 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT RSI Declining From Overbought at VWAP Premium
+SHORT ONLY. VWAP_20 = VWAP(20). RSI_14 = RSI(14). RSI_prev3 = RSI_14.shift(3). ATR_14 = ATR(14). Entry = Close > VWAP_20 * 1.025 AND RSI_14 > 68 AND RSI_14 < RSI_prev3. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Momentum Decay at SMA100
+SHORT ONLY. SMA_100 = Close.rolling(100).mean(). Momentum_10 = Close.pct_change(10). ATR_14 = ATR(14). Entry = Close > SMA_100 * 1.008 AND Momentum_10 < 0.01. Stop = entry + 3.0 * ATR_14. TP1 = entry - 4.5 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.5. Max hold 90 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT RSI Divergence at EMA50 Resistance
+SHORT ONLY. EMA_50 = EMA(50). RSI_9 = RSI(9). RSI_prev5 = RSI_9.shift(5). ATR_14 = ATR(14). Entry = Close > EMA_50 * 1.015 AND RSI_9 > 70 AND RSI_9 < RSI_prev5. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Overbought RSI at SMA50 Premium
+SHORT ONLY. SMA_50 = Close.rolling(50).mean(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close > SMA_50 * 1.012 AND RSI_14 > 72. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Fast RSI Overbought at EMA25 Premium
+SHORT ONLY. EMA_25 = EMA(25). RSI_7 = RSI(7). ATR_14 = ATR(14). Entry = Close > EMA_25 * 1.02 AND RSI_7 > 75. Stop = entry + 2.6 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 80 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Stochastic Extreme at Rolling High
+SHORT ONLY. High_20 = High.rolling(20).max(). Stoch_K = Stochastic %K(14,3). ATR_14 = ATR(14). Entry = Close > High_20.shift(1) * 0.995 AND Stoch_K > 83. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT MFI Overbought at VWAP Premium
+SHORT ONLY. VWAP_20 = VWAP(20). MFI_14 = MFI(14). ATR_14 = ATR(14). Entry = Close > VWAP_20 * 1.025 AND MFI_14 > 78. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Weak Bounce Below SMA200
+SHORT ONLY. SMA_200 = Close.rolling(200).mean(). Momentum_10 = Close.pct_change(10). ATR_14 = ATR(14). Entry = Close < SMA_200 * 0.98 AND Momentum_10 > 0.005 AND Momentum_10 < 0.02. Stop = entry + 3.0 * ATR_14. TP1 = entry - 5.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.5. Max hold 90 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Overbought at Declining MACD
+SHORT ONLY. EMA_20 = EMA(20). MACD_hist = MACD histogram(12,26,9). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close > EMA_20 * 1.015 AND MACD_hist < MACD_hist.shift(3) AND RSI_14 > 65. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Failed Retest Loose Window
+SHORT ONLY. Low_30 = Low.rolling(30).min().shift(5). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close > Low_30 * 0.99 AND Close < Low_30 * 1.02 AND RSI_14 > 55. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.5 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Higher High Lower RSI at Premium
+SHORT ONLY. High_20 = High.rolling(20).max(). RSI_14 = RSI(14). RSI_high_20 = RSI_14.rolling(20).max(). ATR_14 = ATR(14). Entry = Close >= High_20 * 0.998 AND RSI_14 < RSI_high_20 * 0.88. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Momentum Exhaustion at SMA20
+SHORT ONLY. SMA_20 = Close.rolling(20).mean(). Momentum_7 = Close.pct_change(7). Momentum_prev = Momentum_7.shift(3). ATR_14 = ATR(14). Entry = Close > SMA_20 * 1.01 AND Momentum_7 < Momentum_prev AND Momentum_7 < 0.015. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Weak Rally at VWAP Premium
+SHORT ONLY. VWAP_25 = VWAP(25). Momentum_10 = Close.pct_change(10). ATR_14 = ATR(14). Entry = Close > VWAP_25 * 1.02 AND Momentum_10 < 0.015. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Williams %R Overbought at EMA50
+SHORT ONLY. EMA_50 = EMA(50). WilliamsR_14 = Williams %R(14). ATR_14 = ATR(14). Entry = Close > EMA_50 * 1.015 AND WilliamsR_14 > -18. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Stochastic Declining From Extreme at SMA50
+SHORT ONLY. SMA_50 = Close.rolling(50).mean(). Stoch_K = Stochastic %K(12,3). Stoch_prev = Stoch_K.shift(3). ATR_14 = ATR(14). Entry = Close > SMA_50 * 1.01 AND Stoch_K > 78 AND Stoch_K < Stoch_prev. Stop = entry + 2.8 * ATR_14. TP1 = entry - 4.0 * (stop - entry). TP2 = entry - 7.0 * (stop - entry). Size 0.55. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+-- BATCH_3_BEAR_SHORT_START --
+-- CAPITULATION PATTERN: All ideas below use momentum plunge + volume surge (proven winner pattern from 15 validated 4h bear strategies) --
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Momentum Plunge with Volume Surge Standard
+SHORT ONLY. Momentum_20 = Close.pct_change(20). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_20 < -0.045 AND Volume > 2.0 * Vol_avg_20. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.4. Risk 0.65% equity. Max hold 75 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Sustained Plunge Deep Volume Confirmation
+SHORT ONLY. Momentum_30 = Close.pct_change(30). Vol_avg_22 = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_30 < -0.05 AND Volume > 2.2 * Vol_avg_22. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.35. Risk 0.65% equity. Max hold 80 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Fast Crash Detection Volume Spike
+SHORT ONLY. Momentum_14 = Close.pct_change(14). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_14 < -0.04 AND Volume > 1.9 * Vol_avg_20. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.4. Risk 0.65% equity. Max hold 70 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Velocity Crash Rapid Momentum Drop
+SHORT ONLY. Momentum_7 = Close.pct_change(7). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_7 < -0.03 AND Volume > 1.8 * Vol_avg_20. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.4. Risk 0.65% equity. Max hold 64 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Deep Plunge Extreme Volume Capitulation
+SHORT ONLY. Momentum_25 = Close.pct_change(25). Vol_avg_25 = Volume.rolling(25).mean(). ATR_14 = ATR(14). Entry = Momentum_25 < -0.055 AND Volume > 2.3 * Vol_avg_25. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.35. Risk 0.65% equity. Max hold 80 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Extended Crash Long Lookback Momentum
+SHORT ONLY. Momentum_40 = Close.pct_change(40). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_40 < -0.06 AND Volume > 2.0 * Vol_avg_20. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.35. Risk 0.65% equity. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Mid Momentum Drop Volume Confirmed
+SHORT ONLY. Momentum_10 = Close.pct_change(10). Vol_avg_22 = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.035 AND Volume > 2.0 * Vol_avg_22. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.4. Risk 0.65% equity. Max hold 70 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Moderate Plunge Looser Volume Gate
+SHORT ONLY. Momentum_20 = Close.pct_change(20). Vol_avg_25 = Volume.rolling(25).mean(). ATR_14 = ATR(14). Entry = Momentum_20 < -0.04 AND Volume > 1.8 * Vol_avg_25. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.45. Risk 0.65% equity. Max hold 75 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Intermediate Crash Tight Volume Filter
+SHORT ONLY. Momentum_15 = Close.pct_change(15). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_15 < -0.038 AND Volume > 2.1 * Vol_avg_20. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.4. Risk 0.65% equity. Max hold 72 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Deep Crash Extreme Volume High Confidence
+SHORT ONLY. Momentum_35 = Close.pct_change(35). Vol_avg_22 = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Momentum_35 < -0.055 AND Volume > 2.5 * Vol_avg_22. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.3. Risk 0.65% equity. Max hold 85 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Breakdown Below Recent Lows Volume Confirmed
+SHORT ONLY. Low_14 = Low.rolling(14).min(). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close < Low_14.shift(1) AND Volume > 2.0 * Vol_avg_20. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.4. Risk 0.65% equity. Max hold 75 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Wider Breakdown Below 20bar Lows Volume Surge
+SHORT ONLY. Low_20 = Low.rolling(20).min(). Vol_avg_22 = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Close < Low_20.shift(1) AND Volume > 1.8 * Vol_avg_22. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.4. Risk 0.65% equity. Max hold 78 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Mid Range Breakdown Strict Volume Gate
+SHORT ONLY. Low_16 = Low.rolling(16).min(). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close < Low_16.shift(1) AND Volume > 2.2 * Vol_avg_20. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.35. Risk 0.65% equity. Max hold 75 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Wide Breakdown Below 25bar Lows Volume Spike
+SHORT ONLY. Low_25 = Low.rolling(25).min(). Vol_avg_25 = Volume.rolling(25).mean(). ATR_14 = ATR(14). Entry = Close < Low_25.shift(1) AND Volume > 1.9 * Vol_avg_25. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.4. Risk 0.65% equity. Max hold 80 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Fast Breakdown Below 10bar Lows Extreme Volume
+SHORT ONLY. Low_10 = Low.rolling(10).min(). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close < Low_10.shift(1) AND Volume > 2.3 * Vol_avg_20. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.4. Risk 0.65% equity. Max hold 64 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Momentum Crash Confirmed by RSI Oversold
+SHORT ONLY. Momentum_20 = Close.pct_change(20). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Momentum_20 < -0.04 AND RSI_14 < 32. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.4. Risk 0.65% equity. Max hold 75 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Sustained Crash Deep RSI Oversold
+SHORT ONLY. Momentum_30 = Close.pct_change(30). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Momentum_30 < -0.05 AND RSI_14 < 35. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.35. Risk 0.65% equity. Max hold 80 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Fast Crash Extreme RSI Oversold
+SHORT ONLY. Momentum_14 = Close.pct_change(14). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Momentum_14 < -0.035 AND RSI_14 < 30. Stop = entry + 2.7 * ATR_14. TP1 = entry - 4.0 * (2.7 * ATR_14). TP2 = entry - 7.0 * (2.7 * ATR_14). Size 0.4. Risk 0.65% equity. Max hold 70 bars.
+Target 30-150 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit).
+
+-- BATCH_4_BEAR_SHORT_START --
+-- EXPERT DESIGN: 3+ entry conditions, fixed 1-1.5% TP, max 30-50 bars, NO trailing stop, BTC focus --
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Breakdown Below Lows with Momentum and Volume Surge
+SHORT ONLY. Low_20 = Low.rolling(20).min(). Momentum_20 = Close.pct_change(20). Vol_avg_22 = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Close < Low_20.shift(1) AND Momentum_20 < -0.04 AND Volume > 2.0 * Vol_avg_22. Stop = entry + 1.8 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.40% risk. Max hold 40 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Below SMA50 Discount with Momentum Crash and Volume Spike
+SHORT ONLY. SMA_50 = Close.rolling(50).mean(). Momentum_20 = Close.pct_change(20). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close < SMA_50 * 0.98 AND Momentum_20 < -0.04 AND Volume > 2.0 * Vol_avg_20. Stop = entry + 1.8 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.40% risk. Max hold 40 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Breakdown Below 14bar Lows with Fast Momentum and Volume
+SHORT ONLY. Low_14 = Low.rolling(14).min(). Momentum_14 = Close.pct_change(14). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close < Low_14.shift(1) AND Momentum_14 < -0.035 AND Volume > 1.8 * Vol_avg_20. Stop = entry + 1.5 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.45% risk. Max hold 35 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Below SMA100 Deep Discount with Momentum and Volume
+SHORT ONLY. SMA_100 = Close.rolling(100).mean(). Momentum_25 = Close.pct_change(25). Vol_avg_22 = Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Close < SMA_100 * 0.97 AND Momentum_25 < -0.05 AND Volume > 2.2 * Vol_avg_22. Stop = entry + 2.0 * ATR_14. TP = entry * 0.985 (fixed 1.5% target). Size based on 0.35% risk. Max hold 45 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT EMA Bearish Alignment with Momentum Crash and Volume Surge
+SHORT ONLY. EMA_20 = EMA(20). EMA_50 = EMA(50). Momentum_20 = Close.pct_change(20). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = EMA_20 < EMA_50 AND Momentum_20 < -0.04 AND Volume > 2.0 * Vol_avg_20. Stop = entry + 1.8 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.40% risk. Max hold 40 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Below SMA50 with Momentum and RSI Oversold
+SHORT ONLY. SMA_50 = Close.rolling(50).mean(). Momentum_20 = Close.pct_change(20). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close < SMA_50 * 0.98 AND Momentum_20 < -0.04 AND RSI_14 < 35. Stop = entry + 1.8 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.40% risk. Max hold 40 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Breakdown Below 25bar Lows with Sustained Momentum and Volume
+SHORT ONLY. Low_25 = Low.rolling(25).min(). Momentum_30 = Close.pct_change(30). Vol_avg_25 = Volume.rolling(25).mean(). ATR_14 = ATR(14). Entry = Close < Low_25.shift(1) AND Momentum_30 < -0.05 AND Volume > 2.0 * Vol_avg_25. Stop = entry + 2.0 * ATR_14. TP = entry * 0.985 (fixed 1.5% target). Size based on 0.35% risk. Max hold 50 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Below EMA20 with Momentum Crash and ATR Expansion
+SHORT ONLY. EMA_20 = EMA(20). Momentum_14 = Close.pct_change(14). ATR_14 = ATR(14). ATR_prev = ATR(14).shift(5). Entry = Close < EMA_20 * 0.99 AND Momentum_14 < -0.035 AND ATR_14 > ATR_prev * 1.3. Stop = entry + 1.5 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.45% risk. Max hold 35 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Dual Momentum Crash with Volume Confirmation
+SHORT ONLY. Momentum_10 = Close.pct_change(10). Momentum_30 = Close.pct_change(30). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Momentum_10 < -0.03 AND Momentum_30 < -0.05 AND Volume > 1.8 * Vol_avg_20. Stop = entry + 1.8 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.40% risk. Max hold 40 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Breakdown Below 16bar Lows with Momentum and MACD Falling
+SHORT ONLY. Low_16 = Low.rolling(16).min(). Momentum_20 = Close.pct_change(20). MACD_hist = MACD histogram(12,26,9). ATR_14 = ATR(14). Entry = Close < Low_16.shift(1) AND Momentum_20 < -0.04 AND MACD_hist < MACD_hist.shift(3). Stop = entry + 1.8 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.40% risk. Max hold 40 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Below SMA20 with RSI Oversold and Volume Spike
+SHORT ONLY. SMA_20 = Close.rolling(20).mean(). RSI_14 = RSI(14). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close < SMA_20 * 0.985 AND RSI_14 < 30 AND Volume > 2.0 * Vol_avg_20. Stop = entry + 1.5 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.45% risk. Max hold 35 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Below SMA50 with Fast and Slow Momentum Crash
+SHORT ONLY. SMA_50 = Close.rolling(50).mean(). Momentum_7 = Close.pct_change(7). Momentum_25 = Close.pct_change(25). ATR_14 = ATR(14). Entry = Close < SMA_50 * 0.98 AND Momentum_7 < -0.025 AND Momentum_25 < -0.04. Stop = entry + 1.8 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.40% risk. Max hold 40 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT EMA Bearish Alignment with RSI Oversold and Momentum
+SHORT ONLY. EMA_20 = EMA(20). EMA_50 = EMA(50). RSI_14 = RSI(14). Momentum_20 = Close.pct_change(20). ATR_14 = ATR(14). Entry = EMA_20 < EMA_50 AND RSI_14 < 35 AND Momentum_20 < -0.04. Stop = entry + 1.8 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.40% risk. Max hold 40 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Breakdown Below 30bar Lows with Volume Surge and RSI Oversold
+SHORT ONLY. Low_30 = Low.rolling(30).min(). Vol_avg_22 = Volume.rolling(22).mean(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close < Low_30.shift(1) AND Volume > 2.2 * Vol_avg_22 AND RSI_14 < 35. Stop = entry + 2.0 * ATR_14. TP = entry * 0.985 (fixed 1.5% target). Size based on 0.35% risk. Max hold 50 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Below SMA50 with Momentum Crash and ATR Expansion
+SHORT ONLY. SMA_50 = Close.rolling(50).mean(). Momentum_20 = Close.pct_change(20). ATR_14 = ATR(14). ATR_prev = ATR(14).shift(5). Entry = Close < SMA_50 * 0.98 AND Momentum_20 < -0.04 AND ATR_14 > ATR_prev * 1.3. Stop = entry + 1.8 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.40% risk. Max hold 40 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Breakdown with MACD Decline and Volume Confirmation
+SHORT ONLY. Low_20 = Low.rolling(20).min(). MACD_hist = MACD histogram(12,26,9). Vol_avg_20 = Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close < Low_20.shift(1) AND MACD_hist < 0 AND MACD_hist < MACD_hist.shift(3) AND Volume > 1.8 * Vol_avg_20. Stop = entry + 1.8 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.40% risk. Max hold 40 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Below EMA50 with Triple Confirmation Momentum Volume RSI
+SHORT ONLY. EMA_50 = EMA(50). Momentum_14 = Close.pct_change(14). Vol_avg_20 = Volume.rolling(20).mean(). RSI_14 = RSI(14). ATR_14 = ATR(14). Entry = Close < EMA_50 * 0.98 AND Momentum_14 < -0.035 AND Volume > 1.8 * Vol_avg_20 AND RSI_14 < 40. Stop = entry + 1.5 * ATR_14. TP = entry * 0.99 (fixed 1% target). Size based on 0.45% risk. Max hold 35 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+
+[NEW_IDEA]
+ARCHETYPE: SHORT Below SMA100 with EMA Alignment and Momentum Crash
+SHORT ONLY. SMA_100 = Close.rolling(100).mean(). EMA_20 = EMA(20). EMA_50 = EMA(50). Momentum_25 = Close.pct_change(25). ATR_14 = ATR(14). Entry = Close < SMA_100 * 0.97 AND EMA_20 < EMA_50 AND Momentum_25 < -0.05. Stop = entry + 2.0 * ATR_14. TP = entry * 0.985 (fixed 1.5% target). Size based on 0.35% risk. Max hold 50 bars. NO trailing stop.
+Target 30-120 trades on ~35000 bars of 15m data. Commission: 0.055% per trade (Bybit). Avg profit >= 0.4%.
+

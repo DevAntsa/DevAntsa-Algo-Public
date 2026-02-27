@@ -1,0 +1,859 @@
+-- ROLE --
+BULL market crypto strategy generator. 4h timeframe ONLY.
+Data: Oct 2023 - March 2024. B&H: BTC +153%, SOL +715%, AVAX +466%.
+Goal: Sharpe > 2.0, DD < 10%, 30-50 trades.
+
+-- MANDATORY RULES --
+1. EXACTLY 2 entry conditions (3+ = signal starvation)
+2. Momentum thresholds: 0.008-0.015 ONLY (higher kills Sharpe)
+3. Stops: Initial 2.5x ATR(14), Trail Highest_high - 2.0x ATR(14)
+4. NO wide stops (4.0x+ destroys Sharpe)
+5. NO percentile ranking (.rolling().rank() causes bugs)
+6. NO fixed take-profit (trail only)
+
+-- PROVEN ARCHETYPES (USE THESE) --
+1. CascadeHighMomentum (Sharpe 3.22):
+   HH = High > High.shift(1), Mom_4 > 0.010
+2. ElasticReclaim (Sharpe 3.21):
+   Dipped = Low.shift(1) < EMA_15.shift(1), Reclaimed = Close > Close.shift(1)
+3. ApexCloseEma (Sharpe 2.67):
+   Close > EMA_12, Mom_4 > 0.010
+4. DualSpanMomentum (Sharpe 2.15):
+   Spread = (EMA_8 - EMA_21) / EMA_21, Spread > 0.006 AND accelerating
+
+-- PARAMETERS --
+Mom_3: > 0.008 | Mom_4: > 0.010 | Mom_5: > 0.012 | Mom_6: > 0.012
+EMA: 10, 12, 15, 21 (proven periods)
+Structure: HH = High > High.shift(1), HL = Low > Low.shift(1)
+
+-- ASSETS --
+TIER 1 (deploy): SOL-4h (Sharpe 2.5-3.2), BTC-4h (Sharpe 2.0-2.7)
+TIER 2 (selective): AVAX-4h, BNB-4h
+EXCLUDED: XRP (100% fail), MATIC, LINK, DOT
+
+-- QUALITY TIERS --
+LEGENDARY: Sharpe >2.5, DD <5% = DEPLOY
+GOLD: Sharpe >2.0, DD <10% = DEPLOY
+SILVER: Sharpe >1.5, DD <15% = MAYBE
+FAILED: Sharpe <1.5 = REJECT
+
+Sharpe > Return. Always.
+
+[NEW_IDEA]
+ARCHETYPE: Close Strength Breakout
+LONG ONLY. Close_strength = (Close - Low) / (High - Low + 0.0001). High_10 = High.rolling(10).max(). ATR_14 = ATR(14). Entry = Close > High_10.shift(1) AND Close_strength > 0.7. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMA Crossover Fresh
+LONG ONLY. EMA_10 = Close.ewm(10).mean(). EMA_20 = Close.ewm(20).mean(). Cross = EMA_10 > EMA_20. Cross_prev = EMA_10.shift(1) < EMA_20.shift(1). ATR_14 = ATR(14). Entry = Cross AND Cross_prev. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: Two Bar Momentum
+LONG ONLY. Up_1 = Close > Close.shift(1). Up_2 = Close.shift(1) > Close.shift(2). ATR_14 = ATR(14). Entry = Up_1 AND Up_2. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ATR Distance Entry
+LONG ONLY. High_20 = High.rolling(20).max(). ATR_14 = ATR(14). Dist = High_20 - Close. Entry = Dist < ATR_14 * 0.5. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: Momentum Flip Long
+LONG ONLY. Mom_5 = (Close / Close.shift(5)) - 1. Mom_prev = (Close.shift(1) / Close.shift(6)) - 1. ATR_14 = ATR(14). Entry = Mom_5 > 0 AND Mom_prev < 0. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomentumThresholdBTC
+LONG ONLY. Mom_6 = (Close / Close.shift(6)) - 1. Vol_ratio = Volume / Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Mom_6 > 0.015 AND Vol_ratio > 1.3. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMAStackConfirm
+LONG ONLY. EMA_9 = Close.ewm(9).mean(). EMA_21 = Close.ewm(21).mean(). ATR_14 = ATR(14). Entry = EMA_9 > EMA_21 AND Close > EMA_9. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakoutMomFilter
+LONG ONLY. High_12 = High.rolling(12).max(). Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Close > High_12.shift(1) AND Mom_5 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ATRProximityV3
+LONG ONLY. High_15 = High.rolling(15).max(). ATR_14 = ATR(14). Dist = (High_15 - Close) / ATR_14. Entry = Dist < 0.5 AND Close > Close.shift(1). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolumeSurgeBreak
+LONG ONLY. Vol_ratio = Volume / Volume.rolling(20).mean(). High_10 = High.rolling(10).max(). ATR_14 = ATR(14). Entry = Vol_ratio > 1.4 AND Close > High_10.shift(1). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomAccelerationV2
+LONG ONLY. Mom_4 = (Close / Close.shift(4)) - 1. Mom_prev = (Close.shift(1) / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Mom_4 > Mom_prev AND Mom_4 > 0.01. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMACrossTrend
+LONG ONLY. EMA_8 = Close.ewm(8).mean(). EMA_21 = Close.ewm(21).mean(). Cross = EMA_8 > EMA_21. Cross_prev = EMA_8.shift(1) <= EMA_21.shift(1). ATR_14 = ATR(14). Entry = Cross AND Cross_prev. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolCompressionBreak
+LONG ONLY. ATR_14 = ATR(14). ATR_avg = ATR_14.rolling(20).mean(). Quiet = ATR_14 < ATR_avg * 0.75. High_8 = High.rolling(8).max(). Entry = Close > High_8.shift(1) AND Quiet.shift(1). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: DualMomThreshold
+LONG ONLY. Mom_3 = (Close / Close.shift(3)) - 1. Mom_10 = (Close / Close.shift(10)) - 1. ATR_14 = ATR(14). Entry = Mom_3 > 0.006 AND Mom_10 > 0.012. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakoutVolumeConf
+LONG ONLY. High_15 = High.rolling(15).max(). Vol_ratio = Volume / Volume.rolling(20).mean(). ATR_14 = ATR(14). Entry = Close > High_15.shift(1) AND Vol_ratio > 1.35. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: TrendMomConfirm
+LONG ONLY. SMA_50 = Close.rolling(50).mean(). Mom_6 = (Close / Close.shift(6)) - 1. ATR_14 = ATR(14). Entry = Close > SMA_50 AND Mom_6 > 0.012. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMABounceEntry
+LONG ONLY. EMA_21 = Close.ewm(21).mean(). Dist_pct = (Close - EMA_21) / EMA_21. ATR_14 = ATR(14). Entry = Dist_pct > 0 AND Dist_pct < 0.015. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: HigherHighMom
+LONG ONLY. HH = High > High.rolling(5).max().shift(1). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_4 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: FastMomCross
+LONG ONLY. Mom_3 = (Close / Close.shift(3)) - 1. Mom_8 = (Close / Close.shift(8)) - 1. ATR_14 = ATR(14). Entry = Mom_3 > Mom_8 AND Mom_3 > 0.005. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolExpansionLong
+LONG ONLY. ATR_14 = ATR(14). ATR_ratio = ATR_14 / ATR_14.rolling(10).mean(). ATR_14 = ATR(14). Entry = ATR_ratio > 1.15 AND Close > Open. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: CloseStrengthMom
+LONG ONLY. Strength = (Close - Low) / (High - Low + 0.0001). Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Strength > 0.75 AND Mom_5 > 0.01. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMASpreadMom
+LONG ONLY. EMA_9 = Close.ewm(9).mean(). EMA_26 = Close.ewm(26).mean(). Spread = (EMA_9 - EMA_26) / EMA_26. ATR_14 = ATR(14). Entry = Spread > 0.008 AND Close > EMA_9. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: RangeBreakMom
+LONG ONLY. High_10 = High.rolling(10).max(). Mom_6 = (Close / Close.shift(6)) - 1. ATR_14 = ATR(14). Entry = Close > High_10.shift(1) AND Mom_6 > 0.01. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomentumSurgeVolume
+LONG ONLY. Mom_5 = (Close / Close.shift(5)) - 1. Vol_ratio = Volume / Volume.rolling(15).mean(). ATR_14 = ATR(14). Entry = Mom_5 > 0.018 AND Vol_ratio > 1.5. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakoutAcceleration
+LONG ONLY. High_8 = High.rolling(8).max(). Mom_4 = (Close / Close.shift(4)) - 1. Mom_prev = (Close.shift(1) / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Close > High_8.shift(1) AND Mom_4 > Mom_prev. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMAMomentumSync
+LONG ONLY. EMA_12 = Close.ewm(12).mean(). Mom_6 = (Close / Close.shift(6)) - 1. ATR_14 = ATR(14). Entry = Close > EMA_12 AND Mom_6 > 0.014. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolCompressionExpand
+LONG ONLY. ATR_14 = ATR(14). ATR_avg = ATR_14.rolling(25).mean(). Compressed = ATR_14.shift(1) < ATR_avg.shift(1) * 0.7. ATR_14 = ATR(14). Entry = ATR_14 > ATR_avg AND Compressed. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: DualEMACross
+LONG ONLY. EMA_8 = Close.ewm(8).mean(). EMA_18 = Close.ewm(18).mean(). ATR_14 = ATR(14). Entry = EMA_8 > EMA_18 AND EMA_8.shift(1) <= EMA_18.shift(1). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomentumVolumeConfirm
+LONG ONLY. Mom_8 = (Close / Close.shift(8)) - 1. Vol_surge = Volume > Volume.rolling(20).mean() * 1.4. ATR_14 = ATR(14). Entry = Mom_8 > 0.02 AND Vol_surge. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: HighBreakMomFilter
+LONG ONLY. High_14 = High.rolling(14).max(). Mom_7 = (Close / Close.shift(7)) - 1. ATR_14 = ATR(14). Entry = Close > High_14.shift(1) AND Mom_7 > 0.01. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMATrendMom
+LONG ONLY. EMA_21 = Close.ewm(21).mean(). Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Close > EMA_21 AND Mom_5 > 0.012. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolBreakoutSimple
+LONG ONLY. High_12 = High.rolling(12).max(). Vol_mult = Volume / Volume.rolling(18).mean(). ATR_14 = ATR(14). Entry = Close > High_12.shift(1) AND Vol_mult > 1.3. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomAccelLong
+LONG ONLY. Mom_6 = (Close / Close.shift(6)) - 1. Mom_prev = (Close.shift(2) / Close.shift(8)) - 1. ATR_14 = ATR(14). Entry = Mom_6 > Mom_prev AND Mom_6 > 0.015. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMABreakConfirm
+LONG ONLY. EMA_15 = Close.ewm(15).mean(). High_10 = High.rolling(10).max(). ATR_14 = ATR(14). Entry = Close > EMA_15 AND Close > High_10.shift(1). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: SurgeMomentum
+LONG ONLY. Mom_4 = (Close / Close.shift(4)) - 1. Strength = (Close - Low) / (High - Low + 0.0001). ATR_14 = ATR(14). Entry = Mom_4 > 0.015 AND Strength > 0.7. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolSpikeBreak
+LONG ONLY. Vol_ratio = Volume / Volume.rolling(25).mean(). High_6 = High.rolling(6).max(). ATR_14 = ATR(14). Entry = Vol_ratio > 1.6 AND Close > High_6.shift(1). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomTrendFilter
+LONG ONLY. SMA_40 = Close.rolling(40).mean(). Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Close > SMA_40 AND Mom_5 > 0.01. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: FastEMAMom
+LONG ONLY. EMA_10 = Close.ewm(10).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = Close > EMA_10 AND Mom_4 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakoutStrength
+LONG ONLY. High_16 = High.rolling(16).max(). Bar_strength = (Close - Open) / (High - Low + 0.0001). ATR_14 = ATR(14). Entry = Close > High_16.shift(1) AND Bar_strength > 0.6. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: DualMomSync
+LONG ONLY. Mom_3 = (Close / Close.shift(3)) - 1. Mom_9 = (Close / Close.shift(9)) - 1. ATR_14 = ATR(14). Entry = Mom_3 > 0.008 AND Mom_9 > 0.018. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMAVolBreak
+LONG ONLY. EMA_20 = Close.ewm(20).mean(). Vol_above = Volume > Volume.rolling(20).mean() * 1.35. ATR_14 = ATR(14). Entry = Close > EMA_20 AND Vol_above. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- BATCH 11 START --
+
+[NEW_IDEA]
+ARCHETYPE: TripleMomFilter
+LONG ONLY. Mom_3 = (Close / Close.shift(3)) - 1. Mom_6 = (Close / Close.shift(6)) - 1. ATR_14 = ATR(14). Entry = Mom_3 > 0.007 AND Mom_6 > 0.015. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolumeEMASync
+LONG ONLY. EMA_12 = Close.ewm(12).mean(). Vol_ratio = Volume / Volume.rolling(15).mean(). ATR_14 = ATR(14). Entry = Close > EMA_12 AND Vol_ratio > 1.45. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakoutMomAccel
+LONG ONLY. High_10 = High.rolling(10).max(). Mom_5 = (Close / Close.shift(5)) - 1. Mom_prev = (Close.shift(1) / Close.shift(6)) - 1. ATR_14 = ATR(14). Entry = Close > High_10.shift(1) AND Mom_5 > Mom_prev. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMARibbonExpand
+LONG ONLY. EMA_8 = Close.ewm(8).mean(). EMA_21 = Close.ewm(21).mean(). Spread = (EMA_8 - EMA_21) / EMA_21. ATR_14 = ATR(14). Entry = Spread > 0.012 AND Spread > Spread.shift(1). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ConsecutiveUpBars
+LONG ONLY. Up_bar = Close > Open. Consec_up = Up_bar & Up_bar.shift(1) & Up_bar.shift(2). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = Consec_up AND Mom_4 > 0.01. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: HigherLowMom
+LONG ONLY. HL = Low > Low.shift(1). Mom_6 = (Close / Close.shift(6)) - 1. ATR_14 = ATR(14). Entry = HL AND Mom_6 > 0.012. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolSurgeEMABreak
+LONG ONLY. EMA_15 = Close.ewm(15).mean(). Vol_spike = Volume > Volume.rolling(20).mean() * 1.55. ATR_14 = ATR(14). Entry = Close > EMA_15 AND Vol_spike. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomStrengthCombo
+LONG ONLY. Mom_7 = (Close / Close.shift(7)) - 1. Bar_strength = (Close - Low) / (High - Low + 0.0001). ATR_14 = ATR(14). Entry = Mom_7 > 0.016 AND Bar_strength > 0.65. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakVolExpand
+LONG ONLY. High_8 = High.rolling(8).max(). ATR_14 = ATR(14). ATR_ratio = ATR_14 / ATR_14.rolling(15).mean(). Entry = Close > High_8.shift(1) AND ATR_ratio > 1.1. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMACrossVolConfirm
+LONG ONLY. EMA_9 = Close.ewm(9).mean(). EMA_20 = Close.ewm(20).mean(). Vol_above = Volume > Volume.rolling(18).mean() * 1.3. ATR_14 = ATR(14). Entry = EMA_9 > EMA_20 AND Vol_above. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ShortMomBurst
+LONG ONLY. Mom_2 = (Close / Close.shift(2)) - 1. Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Mom_2 > 0.012 AND Mom_5 > 0.02. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: RangeBreakVolume
+LONG ONLY. High_18 = High.rolling(18).max(). Vol_ratio = Volume / Volume.rolling(22).mean(). ATR_14 = ATR(14). Entry = Close > High_18.shift(1) AND Vol_ratio > 1.4. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMADistMom
+LONG ONLY. EMA_25 = Close.ewm(25).mean(). Dist_pct = (Close - EMA_25) / EMA_25. Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = Dist_pct > 0.01 AND Mom_4 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolCompressionMom
+LONG ONLY. ATR_14 = ATR(14). ATR_low = ATR_14 < ATR_14.rolling(20).mean() * 0.8. Mom_6 = (Close / Close.shift(6)) - 1. Entry = ATR_low.shift(1) AND Mom_6 > 0.015. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakStrengthFilter
+LONG ONLY. High_14 = High.rolling(14).max(). Close_strength = (Close - Low) / (High - Low + 0.0001). ATR_14 = ATR(14). Entry = Close > High_14.shift(1) AND Close_strength > 0.72. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomEMATrend
+LONG ONLY. EMA_18 = Close.ewm(18).mean(). Mom_8 = (Close / Close.shift(8)) - 1. ATR_14 = ATR(14). Entry = Close > EMA_18 AND Mom_8 > 0.018. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolBreakMomSync
+LONG ONLY. Vol_surge = Volume > Volume.rolling(16).mean() * 1.5. Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Vol_surge AND Mom_5 > 0.014. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMACrossAccel
+LONG ONLY. EMA_10 = Close.ewm(10).mean(). EMA_22 = Close.ewm(22).mean(). Cross_fresh = (EMA_10 > EMA_22) & (EMA_10.shift(1) <= EMA_22.shift(1)). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Cross_fresh AND Mom_3 > 0.006. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ShortMomBurstV2
+LONG ONLY. Mom_2 = (Close / Close.shift(2)) - 1. Mom_6 = (Close / Close.shift(6)) - 1. ATR_14 = ATR(14). Entry = Mom_2 > 0.010 AND Mom_6 > 0.018. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ShortMomBurstV3
+LONG ONLY. Mom_3 = (Close / Close.shift(3)) - 1. Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Mom_3 > 0.012 AND Mom_5 > 0.022. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ShortMomBurstV4
+LONG ONLY. Mom_2 = (Close / Close.shift(2)) - 1. Mom_7 = (Close / Close.shift(7)) - 1. ATR_14 = ATR(14). Entry = Mom_2 > 0.015 AND Mom_7 > 0.025. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolSurgeMomShort
+LONG ONLY. Vol_ratio = Volume / Volume.rolling(16).mean(). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Vol_ratio > 1.5 AND Mom_3 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolSurgeMomMedium
+LONG ONLY. Vol_ratio = Volume / Volume.rolling(18).mean(). Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Vol_ratio > 1.45 AND Mom_5 > 0.016. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakoutShortMom
+LONG ONLY. High_10 = High.rolling(10).max(). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Close > High_10.shift(1) AND Mom_3 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakoutMomDual
+LONG ONLY. High_8 = High.rolling(8).max(). Mom_2 = (Close / Close.shift(2)) - 1. Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Close > High_8.shift(1) AND Mom_2 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMAShortMomFilter
+LONG ONLY. EMA_12 = Close.ewm(12).mean(). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Close > EMA_12 AND Mom_3 > 0.012. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMAMomBurst
+LONG ONLY. EMA_15 = Close.ewm(15).mean(). Mom_2 = (Close / Close.shift(2)) - 1. Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Close > EMA_15 AND Mom_2 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomAccelShort
+LONG ONLY. Mom_3 = (Close / Close.shift(3)) - 1. Mom_prev = (Close.shift(1) / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = Mom_3 > Mom_prev AND Mom_3 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomAccelDual
+LONG ONLY. Mom_2 = (Close / Close.shift(2)) - 1. Mom_2_prev = (Close.shift(1) / Close.shift(3)) - 1. Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Mom_2 > Mom_2_prev AND Mom_5 > 0.015. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolMomAccel
+LONG ONLY. Vol_spike = Volume > Volume.rolling(15).mean() * 1.5. Mom_4 = (Close / Close.shift(4)) - 1. Mom_prev = (Close.shift(1) / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Vol_spike AND Mom_4 > Mom_prev. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: TripleMomShort
+LONG ONLY. Mom_2 = (Close / Close.shift(2)) - 1. Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = Mom_2 > 0.008 AND Mom_4 > 0.015. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakVolMomShort
+LONG ONLY. High_12 = High.rolling(12).max(). Vol_above = Volume > Volume.rolling(20).mean() * 1.4. Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Close > High_12.shift(1) AND Vol_above. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ShortMomStrength
+LONG ONLY. Mom_2 = (Close / Close.shift(2)) - 1. Bar_strength = (Close - Low) / (High - Low + 0.0001). ATR_14 = ATR(14). Entry = Mom_2 > 0.012 AND Bar_strength > 0.7. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomBurstVolConfirm
+LONG ONLY. Mom_2 = (Close / Close.shift(2)) - 1. Mom_6 = (Close / Close.shift(6)) - 1. Vol_ratio = Volume / Volume.rolling(18).mean(). ATR_14 = ATR(14). Entry = Mom_2 > 0.010 AND Vol_ratio > 1.35. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMABreakMomShort
+LONG ONLY. EMA_10 = Close.ewm(10).mean(). High_8 = High.rolling(8).max(). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Close > High_8.shift(1) AND Mom_3 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ShortMomEMAStack
+LONG ONLY. EMA_8 = Close.ewm(8).mean(). EMA_21 = Close.ewm(21).mean(). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = EMA_8 > EMA_21 AND Mom_3 > 0.012. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomAccelShort
+LONG ONLY.
+EMA_50 = Close.ewm(50).mean().
+Mom_3 = (Close / Close.shift(3)) - 1.
+Mom_prev = (Close.shift(1) / Close.shift(4)) - 1.
+ATR_14 = ATR(14).
+Entry = Close > EMA_50 AND Mom_3 > Mom_prev AND Mom_3 > 0.012.
+Initial_stop = 2.2 * ATR_14.
+Trailing_stop = Highest_high - 2.2 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomAccelDual
+LONG ONLY.
+EMA_50 = Close.ewm(50).mean().
+Mom_2 = (Close / Close.shift(2)) - 1.
+Mom_2_prev = (Close.shift(1) / Close.shift(3)) - 1.
+Mom_5 = (Close / Close.shift(5)) - 1.
+ATR_14 = ATR(14).
+Entry = Close > EMA_50 AND Mom_2 > Mom_2_prev AND Mom_5 > 0.018.
+Initial_stop = 2.2 * ATR_14.
+Trailing_stop = Highest_high - 2.1 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolMomAccel
+LONG ONLY.
+EMA_50 = Close.ewm(50).mean().
+Vol_spike = Volume > Volume.rolling(15).mean() * 1.6.
+Mom_4 = (Close / Close.shift(4)) - 1.
+Mom_prev = (Close.shift(1) / Close.shift(5)) - 1.
+ATR_14 = ATR(14).
+Entry = Close > EMA_50 AND Vol_spike AND Mom_4 > Mom_prev AND Mom_4 > 0.010.
+Initial_stop = 2.3 * ATR_14.
+Trailing_stop = Highest_high - 2.3 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: TripleMomShort
+LONG ONLY.
+EMA_50 = Close.ewm(50).mean().
+Mom_2 = (Close / Close.shift(2)) - 1.
+Mom_4 = (Close / Close.shift(4)) - 1.
+ATR_14 = ATR(14).
+Entry = Close > EMA_50 AND Mom_2 > 0.010 AND Mom_4 > 0.018.
+Initial_stop = 2.2 * ATR_14.
+Trailing_stop = Highest_high - 2.1 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakVolMomShort
+LONG ONLY.
+EMA_50 = Close.ewm(50).mean().
+High_12 = High.rolling(12).max().
+Vol_above = Volume > Volume.rolling(20).mean() * 1.5.
+ATR_14 = ATR(14).
+Entry = Close > EMA_50 AND Close > High_12.shift(1) AND Vol_above.
+Initial_stop = 2.4 * ATR_14.
+Trailing_stop = Highest_high - 2.4 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ShortMomStrength
+LONG ONLY.
+EMA_50 = Close.ewm(50).mean().
+Mom_2 = (Close / Close.shift(2)) - 1.
+Bar_strength = (Close - Low) / (High - Low + 0.0001).
+ATR_14 = ATR(14).
+Entry = Close > EMA_50 AND Mom_2 > 0.014 AND Bar_strength > 0.75.
+Initial_stop = 2.1 * ATR_14.
+Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomBurstVolConfirm
+LONG ONLY.
+EMA_50 = Close.ewm(50).mean().
+Mom_2 = (Close / Close.shift(2)) - 1.
+Mom_6 = (Close / Close.shift(6)) - 1.
+Vol_ratio = Volume / Volume.rolling(18).mean().
+ATR_14 = ATR(14).
+Entry = Close > EMA_50 AND Mom_2 > 0.012 AND Mom_6 > 0.020 AND Vol_ratio > 1.4.
+Initial_stop = 2.3 * ATR_14.
+Trailing_stop = Highest_high - 2.3 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMABreakMomShort
+LONG ONLY.
+EMA_10 = Close.ewm(10).mean().
+EMA_50 = Close.ewm(50).mean().
+High_8 = High.rolling(8).max().
+Mom_3 = (Close / Close.shift(3)) - 1.
+ATR_14 = ATR(14).
+Entry = EMA_10 > EMA_50 AND Close > High_8.shift(1) AND Mom_3 > 0.012.
+Initial_stop = 2.2 * ATR_14.
+Trailing_stop = Highest_high - 2.1 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ShortMomEMAStack
+LONG ONLY.
+EMA_8 = Close.ewm(8).mean().
+EMA_21 = Close.ewm(21).mean().
+EMA_50 = Close.ewm(50).mean().
+Mom_3 = (Close / Close.shift(3)) - 1.
+ATR_14 = ATR(14).
+Entry = EMA_8 > EMA_21 AND EMA_21 > EMA_50 AND Mom_3 > 0.013.
+Initial_stop = 2.2 * ATR_14.
+Trailing_stop = Highest_high - 2.1 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ShortMomBurstCloneA
+LONG ONLY. Mom_2 = (Close / Close.shift(2)) - 1. Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Mom_2 > 0.013 AND Mom_5 > 0.022.
+Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ShortMomBurstCloneB
+LONG ONLY. Mom_3 = (Close / Close.shift(3)) - 1. Mom_6 = (Close / Close.shift(6)) - 1. ATR_14 = ATR(14). Entry = Mom_3 > 0.010 AND Mom_6 > 0.020.
+Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolShortMomBurst
+LONG ONLY. Volume_spike = Volume > Volume.rolling(18).mean() * 1.5. Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Volume_spike AND Mom_5 > 0.018.
+Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: BreakShortMomAccel
+LONG ONLY. High_10 = High.rolling(10).max(). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Close > High_10.shift(1) AND Mom_3 > 0.012.
+Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: DualShortMomentum
+LONG ONLY. Mom_2 = (Close / Close.shift(2)) - 1. Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = Mom_2 > 0.012 AND Mom_4 > 0.016.
+Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMAFilterShortBurst
+LONG ONLY. EMA_20 = Close.ewm(20).mean(). Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = Close > EMA_20 AND Mom_5 > 0.020.
+Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolAccelShortMom
+LONG ONLY. Volume_spike = Volume > Volume.rolling(15).mean() * 1.45. Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Volume_spike AND Mom_3 > 0.011.
+Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- BATCH 19 START --
+-- SHARPE OPTIMIZATION BATCH --
+-- Focus: Variations on LEGENDARY patterns (Sharpe >2.5) --
+-- Rules: 2 conditions, Mom 0.008-0.015, stops 2.5x/2.0x ATR --
+-- Target: Sharpe >2.0, DD <10%, 30-50 trades on 4h --
+
+[NEW_IDEA]
+ARCHETYPE: CascadeHHMom3
+LONG ONLY. HH = High > High.shift(1). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_3 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: CascadeHHMom5
+LONG ONLY. HH = High > High.shift(1). Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_5 > 0.012. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: CascadeHHMom6
+LONG ONLY. HH = High > High.shift(1). Mom_6 = (Close / Close.shift(6)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_6 > 0.012. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ElasticEMA10
+LONG ONLY. EMA_10 = Close.ewm(10).mean(). Dipped = Low.shift(1) < EMA_10.shift(1). Reclaimed = Close > Close.shift(1). ATR_14 = ATR(14). Entry = Dipped AND Reclaimed. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ElasticEMA12
+LONG ONLY. EMA_12 = Close.ewm(12).mean(). Dipped = Low.shift(1) < EMA_12.shift(1). Reclaimed = Close > Close.shift(1). ATR_14 = ATR(14). Entry = Dipped AND Reclaimed. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ElasticEMA20
+LONG ONLY. EMA_20 = Close.ewm(20).mean(). Dipped = Low.shift(1) < EMA_20.shift(1). Reclaimed = Close > Close.shift(1). ATR_14 = ATR(14). Entry = Dipped AND Reclaimed. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ApexEMA10Mom4
+LONG ONLY. EMA_10 = Close.ewm(10).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = Close > EMA_10 AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ApexEMA15Mom4
+LONG ONLY. EMA_15 = Close.ewm(15).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = Close > EMA_15 AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ApexEMA21Mom3
+LONG ONLY. EMA_21 = Close.ewm(21).mean(). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Close > EMA_21 AND Mom_3 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: HHwithEMA12Filter
+LONG ONLY. HH = High > High.shift(1). EMA_12 = Close.ewm(12).mean(). ATR_14 = ATR(14). Entry = HH AND Close > EMA_12. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: HHwithEMA15Filter
+LONG ONLY. HH = High > High.shift(1). EMA_15 = Close.ewm(15).mean(). ATR_14 = ATR(14). Entry = HH AND Close > EMA_15. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: HHwithEMA21Filter
+LONG ONLY. HH = High > High.shift(1). EMA_21 = Close.ewm(21).mean(). ATR_14 = ATR(14). Entry = HH AND Close > EMA_21. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: HigherLowMom4
+LONG ONLY. HL = Low > Low.shift(1). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = HL AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: HigherLowMom3
+LONG ONLY. HL = Low > Low.shift(1). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = HL AND Mom_3 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: HigherLowEMA15
+LONG ONLY. HL = Low > Low.shift(1). EMA_15 = Close.ewm(15).mean(). ATR_14 = ATR(14). Entry = HL AND Close > EMA_15. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: SpreadAccelTight
+LONG ONLY. EMA_8 = Close.ewm(8).mean(). EMA_21 = Close.ewm(21).mean(). Spread = (EMA_8 - EMA_21) / EMA_21. ATR_14 = ATR(14). Entry = Spread > 0.005 AND Spread > Spread.shift(2). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: SpreadEMAConfirm
+LONG ONLY. EMA_8 = Close.ewm(8).mean(). EMA_21 = Close.ewm(21).mean(). Spread = (EMA_8 - EMA_21) / EMA_21. ATR_14 = ATR(14). Entry = Spread > 0.008 AND Close > EMA_8. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: SpreadMomConfirm
+LONG ONLY. EMA_8 = Close.ewm(8).mean(). EMA_21 = Close.ewm(21).mean(). Spread = (EMA_8 - EMA_21) / EMA_21. Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Spread > 0.006 AND Mom_3 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- BATCH 19 END --
+
+-- BATCH 20 START (Jan 25, 2026) --
+-- FOCUS: NEW PATTERNS - Volume, Range Breakouts, Candle Patterns, EMA Crossovers --
+-- NO VARIATIONS OF WINNERS (per v15 rules) --
+
+[NEW_IDEA]
+ARCHETYPE: VolumeSurgeBreak
+LONG ONLY. Vol_Avg = Volume.rolling(20).mean(). Vol_Spike = Volume > Vol_Avg * 1.5. HH = High > High.shift(1). ATR_14 = ATR(14). Entry = Vol_Spike AND HH. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolumeMomentumConfirm
+LONG ONLY. Vol_Avg = Volume.rolling(20).mean(). Vol_High = Volume > Vol_Avg * 1.3. Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = Vol_High AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: RangeBreakout5
+LONG ONLY. Range_High = High.rolling(5).max().shift(1). Breakout = Close > Range_High. ATR_14 = ATR(14). Entry = Breakout AND Close > Close.shift(1). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: RangeBreakout10
+LONG ONLY. Range_High = High.rolling(10).max().shift(1). Breakout = Close > Range_High. ATR_14 = ATR(14). Entry = Breakout AND Close > Close.shift(1). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: InsideBarBreakout
+LONG ONLY. Inside = (High < High.shift(1)) AND (Low > Low.shift(1)). Breakout = Close > High.shift(1). ATR_14 = ATR(14). Entry = Inside.shift(1) AND Breakout. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMACrossGolden
+LONG ONLY. EMA_8 = Close.ewm(8).mean(). EMA_21 = Close.ewm(21).mean(). Cross = (EMA_8 > EMA_21) AND (EMA_8.shift(1) <= EMA_21.shift(1)). ATR_14 = ATR(14). Entry = Cross AND Close > EMA_8. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EMACrossMomentum
+LONG ONLY. EMA_12 = Close.ewm(12).mean(). EMA_26 = Close.ewm(26).mean(). Above = EMA_12 > EMA_26. Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = Above AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ATRCompressionBreak
+LONG ONLY. ATR_14 = ATR(14). ATR_Avg = ATR_14.rolling(20).mean(). Compressed = ATR_14.shift(1) < ATR_Avg.shift(1) * 0.7. Expand = ATR_14 > ATR_14.shift(1). Up = Close > Close.shift(1). Entry = Compressed AND Expand AND Up. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolatilitySqueezeBreak
+LONG ONLY. ATR_14 = ATR(14). ATR_Pct = ATR_14.rolling(50).rank(pct=True). Squeeze = ATR_Pct.shift(1) < 0.3. Breakout = Close > High.shift(1). Entry = Squeeze AND Breakout. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: EngulfingMomentum
+LONG ONLY. Green = Close > Open. PrevRed = Close.shift(1) < Open.shift(1). Engulf = Green AND PrevRed AND (Close > Open.shift(1)). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Engulf AND Mom_3 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: GreenStreakMom
+LONG ONLY. Green1 = Close > Open. Green2 = Close.shift(1) > Open.shift(1). Green3 = Close.shift(2) > Open.shift(2). Streak = Green1 AND Green2 AND Green3. ATR_14 = ATR(14). Entry = Streak AND Close > Close.shift(3). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: DipBuyVolume
+LONG ONLY. EMA_15 = Close.ewm(15).mean(). Dipped = Low.shift(1) < EMA_15.shift(1). Vol_Avg = Volume.rolling(20).mean(). Vol_High = Volume > Vol_Avg * 1.3. Reclaim = Close > EMA_15. ATR_14 = ATR(14). Entry = Dipped AND Vol_High AND Reclaim. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: TrendAccelerator
+LONG ONLY. HH = High > High.shift(1). HL = Low > Low.shift(1). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = HH AND HL AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: MomentumSurge
+LONG ONLY. Mom_2 = (Close / Close.shift(2)) - 1. Mom_2_Prev = (Close.shift(2) / Close.shift(4)) - 1. Surge = Mom_2 > Mom_2_Prev * 2. ATR_14 = ATR(14). Entry = Surge AND Mom_2 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolumeClimaxUp
+LONG ONLY. Vol_Max = Volume.rolling(10).max(). Vol_Climax = Volume >= Vol_Max. Green = Close > Open. ATR_14 = ATR(14). Entry = Vol_Climax AND Green AND Close > Close.shift(1). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: HigherLowHigherHigh
+LONG ONLY. HL = Low > Low.shift(2). HH = High > High.shift(2). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = HL AND HH AND Mom_3 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: CloseRangeBreak
+LONG ONLY. Close_High = Close.rolling(8).max().shift(1). Breakout = Close > Close_High. Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Breakout AND Mom_3 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ATRMoveFilter
+LONG ONLY. ATR_14 = ATR(14). Big_Move = (Close - Close.shift(1)) > ATR_14 * 0.8. EMA_21 = Close.ewm(21).mean(). Trend = Close > EMA_21. Entry = Big_Move AND Trend. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- BATCH 20 END --
+
+-- BATCH 21 START (Jan 25, 2026) --
+-- FOCUS: HYBRID approaches - Proven archetypes + working filters --
+-- Based on v16 rules: Build on VolSpikeBreakout & VolatilitySqueezeBreak patterns --
+
+[NEW_IDEA]
+ARCHETYPE: CascadeVolConfirm
+LONG ONLY. HH = High > High.shift(1). Mom_4 = (Close / Close.shift(4)) - 1. Vol_Avg = Volume.rolling(20).mean(). Vol_OK = Volume > Vol_Avg. ATR_14 = ATR(14). Entry = HH AND Mom_4 > 0.010 AND Vol_OK. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: CascadeVolSpike
+LONG ONLY. HH = High > High.shift(1). Vol_Avg = Volume.rolling(20).mean(). Vol_Spike = Volume > Vol_Avg * 1.3. ATR_14 = ATR(14). Entry = HH AND Vol_Spike. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: CascadeSqueeze
+LONG ONLY. HH = High > High.shift(1). ATR_14 = ATR(14). ATR_Avg = ATR_14.rolling(20).mean(). Squeeze = ATR_14.shift(1) < ATR_Avg.shift(1) * 0.8. ATR_14 = ATR(14). Entry = HH AND Squeeze. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: CascadeExpand
+LONG ONLY. HH = High > High.shift(1). ATR_14 = ATR(14). Expand = ATR_14 > ATR_14.shift(1) * 1.2. Entry = HH AND Expand. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: CascadeGreen
+LONG ONLY. HH = High > High.shift(1). Green = Close > Open. ATR_14 = ATR(14). Entry = HH AND Green. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: CascadeStrong
+LONG ONLY. HH = High > High.shift(1). Strong = (Close - Low) > (High - Low) * 0.7. ATR_14 = ATR(14). Entry = HH AND Strong. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ElasticVolConfirm
+LONG ONLY. EMA_15 = Close.ewm(15).mean(). Dipped = Low.shift(1) < EMA_15.shift(1). Vol_Avg = Volume.rolling(20).mean(). Vol_OK = Volume > Vol_Avg. Reclaim = Close > EMA_15. ATR_14 = ATR(14). Entry = Dipped AND Vol_OK AND Reclaim. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ElasticVolSpike
+LONG ONLY. EMA_15 = Close.ewm(15).mean(). Dipped = Low.shift(1) < EMA_15.shift(1). Vol_Avg = Volume.rolling(20).mean(). Vol_Spike = Volume > Vol_Avg * 1.3. ATR_14 = ATR(14). Entry = Dipped AND Vol_Spike. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ElasticSqueeze
+LONG ONLY. EMA_15 = Close.ewm(15).mean(). Dipped = Low.shift(1) < EMA_15.shift(1). ATR_14 = ATR(14). ATR_Avg = ATR_14.rolling(20).mean(). Squeeze = ATR_14.shift(1) < ATR_Avg.shift(1) * 0.8. Entry = Dipped AND Squeeze. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ElasticExpand
+LONG ONLY. EMA_15 = Close.ewm(15).mean(). Dipped = Low.shift(1) < EMA_15.shift(1). ATR_14 = ATR(14). Expand = ATR_14 > ATR_14.shift(1) * 1.2. Entry = Dipped AND Expand. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ElasticGreen
+LONG ONLY. EMA_15 = Close.ewm(15).mean(). Dipped = Low.shift(1) < EMA_15.shift(1). Green = Close > Open. ATR_14 = ATR(14). Entry = Dipped AND Green. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: ElasticStrong
+LONG ONLY. EMA_15 = Close.ewm(15).mean(). Dipped = Low.shift(1) < EMA_15.shift(1). Strong = (Close - Low) > (High - Low) * 0.7. ATR_14 = ATR(14). Entry = Dipped AND Strong. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: SqueezeBreakHH
+LONG ONLY. ATR_14 = ATR(14). ATR_Avg = ATR_14.rolling(20).mean(). Squeeze = ATR_14.shift(1) < ATR_Avg.shift(1) * 0.7. HH = High > High.shift(1). Entry = Squeeze AND HH. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: SqueezeBreakMom
+LONG ONLY. ATR_14 = ATR(14). ATR_Avg = ATR_14.rolling(20).mean(). Squeeze = ATR_14.shift(1) < ATR_Avg.shift(1) * 0.7. Mom_4 = (Close / Close.shift(4)) - 1. Entry = Squeeze AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: SqueezeBreakEMA
+LONG ONLY. ATR_14 = ATR(14). ATR_Avg = ATR_14.rolling(20).mean(). Squeeze = ATR_14.shift(1) < ATR_Avg.shift(1) * 0.7. EMA_15 = Close.ewm(15).mean(). Above = Close > EMA_15. Entry = Squeeze AND Above. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolSpikeHHMom
+LONG ONLY. Vol_Avg = Volume.rolling(20).mean(). Vol_Spike = Volume > Vol_Avg * 1.5. HH = High > High.shift(1). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = Vol_Spike AND HH AND Mom_3 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolSpikeEMAReclaim
+LONG ONLY. Vol_Avg = Volume.rolling(20).mean(). Vol_Spike = Volume > Vol_Avg * 1.5. EMA_15 = Close.ewm(15).mean(). Dipped = Low.shift(1) < EMA_15.shift(1). ATR_14 = ATR(14). Entry = Vol_Spike AND Dipped. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+ARCHETYPE: VolSpikeRangeBreak
+LONG ONLY. Vol_Avg = Volume.rolling(20).mean(). Vol_Spike = Volume > Vol_Avg * 1.5. Range_High = High.rolling(5).max().shift(1). Breakout = Close > Range_High. ATR_14 = ATR(14). Entry = Vol_Spike AND Breakout. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- BATCH 21 END --
+
+-- BATCH 22 START --
+-- FOCUS: Parameter micro-optimization on PROVEN winners (Sharpe >2.0) --
+-- Goal: Find more Sharpe >2.0 combinations --
+
+-- CascadeHighMomentum Variations (Original: HH + Mom4 > 0.010 = Sharpe 3.22) --
+
+[NEW_IDEA]
+LONG ONLY. HH = High > High.shift(1). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_3 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. HH = High > High.shift(1). Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_5 > 0.012. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. HH = High > High.shift(1). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_4 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. HH = High > High.shift(1). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_4 > 0.012. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. HH_2 = High > High.shift(2). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = HH_2 AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. HH_3 = High > High.shift(3). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = HH_3 AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- ElasticReclaim Variations (Original: Dip below EMA15 + Reclaim = Sharpe 3.21) --
+
+[NEW_IDEA]
+LONG ONLY. EMA_12 = Close.ewm(span=12).mean(). Dipped = Low.shift(2) < EMA_12.shift(2). Reclaimed = Close.shift(1) > Close.shift(2). ATR_14 = ATR(14). Entry = Dipped AND Reclaimed. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_18 = Close.ewm(span=18).mean(). Dipped = Low.shift(2) < EMA_18.shift(2). Reclaimed = Close.shift(1) > Close.shift(2). ATR_14 = ATR(14). Entry = Dipped AND Reclaimed. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_15 = Close.ewm(span=15).mean(). Dipped = Low.shift(2) < EMA_15.shift(2) * 0.995. Reclaimed = Close.shift(1) > Close.shift(2). ATR_14 = ATR(14). Entry = Dipped AND Reclaimed. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_15 = Close.ewm(span=15).mean(). Dipped = Low.shift(2) < EMA_15.shift(2) * 0.998. Reclaimed = Close.shift(1) > Close.shift(2). ATR_14 = ATR(14). Entry = Dipped AND Reclaimed. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_10 = Close.ewm(span=10).mean(). Dipped = Low.shift(2) < EMA_10.shift(2). Reclaimed = Close.shift(1) > Close.shift(2). ATR_14 = ATR(14). Entry = Dipped AND Reclaimed. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_21 = Close.ewm(span=21).mean(). Dipped = Low.shift(2) < EMA_21.shift(2). Reclaimed = Close.shift(1) > Close.shift(2). ATR_14 = ATR(14). Entry = Dipped AND Reclaimed. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- ApexCloseEma Variations (Original: Close > EMA12 + Mom4 > 0.010 = Sharpe 2.67) --
+
+[NEW_IDEA]
+LONG ONLY. EMA_15 = Close.ewm(span=15).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_15) AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_12 = Close.ewm(span=12).mean(). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_12) AND Mom_3 > 0.008. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_12 = Close.ewm(span=12).mean(). Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_12) AND Mom_5 > 0.012. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- DualSpanMomentum Variations (Original: Spread > 0.006 + accelerating = Sharpe 2.15) --
+
+[NEW_IDEA]
+LONG ONLY. EMA_8 = Close.ewm(span=8).mean(). EMA_21 = Close.ewm(span=21).mean(). Spread = (EMA_8 - EMA_21) / EMA_21. ATR_14 = ATR(14). Entry = (Spread > 0.005) AND (Spread > Spread.shift(2) * 1.2). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_8 = Close.ewm(span=8).mean(). EMA_21 = Close.ewm(span=21).mean(). Spread = (EMA_8 - EMA_21) / EMA_21. ATR_14 = ATR(14). Entry = (Spread > 0.008) AND (Spread > Spread.shift(2) * 1.2). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_10 = Close.ewm(span=10).mean(). EMA_25 = Close.ewm(span=25).mean(). Spread = (EMA_10 - EMA_25) / EMA_25. ATR_14 = ATR(14). Entry = (Spread > 0.006) AND (Spread > Spread.shift(2) * 1.15). Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- BATCH 22 END --
+
+-- BATCH 23 START --
+-- FOCUS: Fine-tuning around ApexMomentumThreshold (Sharpe 2.03 winner) --
+-- Goal: Find more Sharpe >2.0 with EMA and momentum micro-variations --
+
+-- ApexMomentumThreshold EMA Period Variations (Close > EMA + Mom4 > 0.010) --
+
+[NEW_IDEA]
+LONG ONLY. EMA_13 = Close.ewm(span=13).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_13) AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_14 = Close.ewm(span=14).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_14) AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_16 = Close.ewm(span=16).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_16) AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_17 = Close.ewm(span=17).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_17) AND Mom_4 > 0.010. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_13 = Close.ewm(span=13).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_13) AND Mom_4 > 0.009. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_14 = Close.ewm(span=14).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_14) AND Mom_4 > 0.011. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- Momentum Threshold Fine-Tuning (around optimal 0.010) --
+
+[NEW_IDEA]
+LONG ONLY. EMA_15 = Close.ewm(span=15).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_15) AND Mom_4 > 0.009. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_15 = Close.ewm(span=15).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_15) AND Mom_4 > 0.011. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_15 = Close.ewm(span=15).mean(). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_15) AND Mom_3 > 0.009. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_15 = Close.ewm(span=15).mean(). Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_15) AND Mom_5 > 0.011. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_15 = Close.ewm(span=15).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_15) AND Mom_4 > 0.0095. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. EMA_15 = Close.ewm(span=15).mean(). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = (Close > EMA_15) AND Mom_4 > 0.0105. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- CascadeHighMomentum Fine-Tuning (HH + Mom around 0.010) --
+
+[NEW_IDEA]
+LONG ONLY. HH = High > High.shift(1). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_4 > 0.009. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. HH = High > High.shift(1). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_4 > 0.011. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. HH = High > High.shift(1). Mom_3 = (Close / Close.shift(3)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_3 > 0.009. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. HH = High > High.shift(1). Mom_5 = (Close / Close.shift(5)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_5 > 0.011. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. HH = High > High.shift(1). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_4 > 0.0095. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+[NEW_IDEA]
+LONG ONLY. HH = High > High.shift(1). Mom_4 = (Close / Close.shift(4)) - 1. ATR_14 = ATR(14). Entry = HH AND Mom_4 > 0.0105. Initial_stop = 2.5 * ATR_14. Trailing_stop = Highest_high - 2.0 * ATR_14.
+
+-- BATCH 23 END --

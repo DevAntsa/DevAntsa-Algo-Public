@@ -1,0 +1,23 @@
+# DevAntsa Lab - Requirements
+# Python 3.10+
+
+# Core
+pandas>=2.0
+numpy>=1.24
+requests>=2.28
+python-dotenv>=1.0
+
+# Backtesting (RBI Agent)
+backtesting>=0.6.5
+
+# Dashboard
+streamlit>=1.30
+plotly>=5.18
+streamlit-autorefresh>=1.0
+
+# Notifications
+python-telegram-bot>=22.0
+rich>=13.0
+
+# Exchange (RBI multi-data, optional)
+ccxt>=4.0
