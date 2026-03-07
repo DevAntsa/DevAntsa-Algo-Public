@@ -10,17 +10,48 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/framework-BYOS-blue" alt="Bring Your Own Strategies">
-  <img src="https://img.shields.io/badge/regimes-bull%20%2B%20bear-green" alt="Bull + Bear">
+  <img src="https://img.shields.io/badge/regimes-bull%20%2B%20sideways%20%2B%20bear-green" alt="Bull + Sideways + Bear">
   <img src="https://img.shields.io/badge/exchange-Binance%20Futures-yellow" alt="Binance Futures">
-  <img src="https://img.shields.io/badge/timeframe-4h-orange" alt="4h Timeframe">
-  <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/deploy-cloud%20VPS-red" alt="Cloud VPS">
+  <img src="https://img.shields.io/badge/python-3.11-blue" alt="Python 3.11">
 </p>
 
 ---
 
-Automated crypto futures trading framework with regime-aware execution, Monte Carlo-validated risk management, and a full live trading infrastructure. Built for prop firm trading on Crypto Fund Trader ($200K accounts via Bybit API).
+Automated crypto futures trading framework with regime-aware execution, walk-forward validated risk management, and a full live trading infrastructure. Built for prop firm trading on Crypto Fund Trader ($200K accounts via Bybit API).
 
 **Strategy implementations are proprietary. This repo provides the full trading infrastructure -- bring your own strategies.**
+
+## Deployment
+
+The system is designed to run 24/7 on a cloud VPS (tested on Hetzner Cloud CPX22, ~$8/month).
+
+| Component | How it runs | Notes |
+|-----------|------------|-------|
+| Trading loop | systemd service on VPS | Auto-start, auto-restart on crash |
+| Liquidation collector | systemd service on VPS | WebSocket streams for BTC/ETH/SOL |
+| Dashboard | Local Streamlit (on-demand) | Syncs data from server, launches locally |
+| Monitoring | Telegram bot | Entry/exit alerts, commands, daily summaries |
+
+### Server Setup
+```bash
+# On your VPS (Ubuntu 22.04+)
+apt update && apt install -y python3-pip python3-venv git
+# Install miniconda, create env, copy code, set up .env
+
+# Create systemd service
+sudo systemctl enable devantsa-loop
+sudo systemctl start devantsa-loop
+
+# View logs
+journalctl -u devantsa-loop -f
+```
+
+### Dashboard (run locally, on-demand)
+```bash
+# Sync latest state from server + launch
+bash run_dashboard.sh
+```
 
 ## Architecture
 
@@ -47,9 +78,6 @@ DevAntsa_Lab/
 |
 `-- RBI_Agents/                 # Research-Backtest-Iterate strategy factory
     `-- RBI_Regular/            # AI-powered strategy generation + backtesting
-        |-- rbi_agent_pp_multi_devantsa.py  # Bull strategy agent
-        |-- rbi_bear.py                     # Bear strategy agent
-        `-- portfolio/                      # Portfolio metrics + Monte Carlo results
 ```
 
 ## Bring Your Own Strategies
@@ -64,7 +92,7 @@ from DevAntsa_Lab.live_trading.strategies.base import (
 
 class MyStrategy(StrategyBase):
     name = "MyStrategy"
-    regime = "bull"           # "bull" or "bear"
+    regime = "bull"           # "bull", "sideways", or "bear"
     direction = "LONG"        # "LONG" or "SHORT"
     assets = ["BTCUSDT"]
     timeframe = "240"         # 4h candles
@@ -93,63 +121,58 @@ Then register it:
 
 See `strategies/example_sma_crossover.py` for a complete 250-line working example with adaptive trailing stops.
 
-## Portfolio Results (Proprietary Strategies)
+## Portfolio v11 Results (Proprietary Strategies)
 
 The proprietary strategies deployed on this framework achieved the following on 5-year backtests (Jan 2021 - Feb 2026):
 
-### Bull LONG (6 strategies, avg Sharpe 1.25)
+### Bull LONG (2 strategies)
 
-| Strategy | Asset | Return | Sharpe | Max DD | Trades |
-|----------|-------|--------|--------|--------|--------|
-| SteepeningSlopeBreakout | SOL-4h | +34.8% | 1.48 | -3.3% | 170 |
-| DualROCAlignment | BTC-1h | +61.6% | 1.21 | -6.7% | 72 |
-| DirectionalIgnition | BTC-4h | +17.0% | 1.23 | -2.7% | 36 |
-| ATRExpansionBreakout | BTC-4h | +35.2% | 1.22 | -3.6% | 96 |
-| DIBreakoutPyramid | BTC-4h | +82.1% | 1.23 | -6.7% | 156 |
-| TripleMomentum | SOL-4h | +7.8% | 1.14 | -1.4% | 49 |
+| Strategy | Asset | Return | Sharpe | Max DD | WF Ratio |
+|----------|-------|--------|--------|--------|----------|
+| ElasticMultiSignal | SOL-4h | +201.0% | 1.61 | -8.53% | 85% |
+| DonchianModern | BTC-4h | +58.0% | 1.35 | -5.60% | 103% |
 
-### Bear SHORT (9 strategies, avg Sharpe 1.19)
+### Sideways LONG (3 strategies)
 
-| Strategy | Asset | Return | Sharpe | Max DD | Trades |
-|----------|-------|--------|--------|--------|--------|
-| StructuralFade | ETH-4h | +18.7% | 1.46 | -1.2% | 33 |
-| BearishLowerHigh | ETH-4h | +56.7% | 1.44 | -3.4% | 108 |
-| AccelBreakdown | ETH-4h | +69.5% | 1.35 | -4.3% | 121 |
-| EMARejectionADX | ETH-4h | +13.6% | 1.21 | -1.6% | 61 |
-| MFIDistribution | ETH-4h | +40.4% | 1.12 | -4.0% | 49 |
-| PanicAcceleration | BTC-4h | +26.6% | 1.19 | -2.6% | 63 |
-| ExpansionBreakdown | BTC-4h | +15.4% | 0.79 | -2.5% | 40 |
-| WorseningMomentum | SOL-4h | +51.2% | 1.13 | -4.7% | 80 |
-| ExpandingBodyBear | SOL-4h | +18.4% | 1.07 | -2.9% | 51 |
+| Strategy | Asset | Return | Sharpe | Max DD | WF Ratio |
+|----------|-------|--------|--------|--------|----------|
+| MultiSignalCCI | SOL-4h | +135.3% | 1.92 | -3.88% | 85% |
+| DailyCCI | SOL-D | +41.3% | 1.38 | -3.70% | -- |
+| EMABounce | ETH-4h | +24.8% | 0.95 | -6.31% | 168% |
 
-### Monte Carlo Risk (5,000 simulations per portfolio)
+### Bear SHORT (3 strategies)
 
-| Metric | Bull (6) | Bear (9) |
-|--------|----------|----------|
-| 95th worst-case DD | -6.19% | -7.83% |
-| Safe allocation (<6% DD) | 97% | 77% |
-| Bear NOT crash-dependent | -- | 50/50 crash vs non-crash PnL |
+| Strategy | Asset | Return | Sharpe | Max DD |
+|----------|-------|--------|--------|--------|
+| ExitMicroTune | ETH-4h | +75.4% | 1.22 | -6.53% |
+| BCDExitTune | SOL-4h | -- | 1.0+ | -5.00% |
+| PanicSweepOpt | BTC-4h | +26.6% | 1.17 | -5.08% |
 
-Combined safe allocation: **77%** (bear is the binding constraint).
+### v11 Key Features
+- 3-regime system (bull/sideways/bear) with self-gating via SMA200
+- Walk-forward validated: all strategies WF > 70%
+- DD-budget leverage: only low-DD strategies get >1x leverage
+- Portfolio-level safety: per-asset exposure caps, aggregate risk cap
+- Multi-signal portfolio per strategy with per-signal risk sizing
 
 ## RBI Agent System
 
 The Research-Backtest-Iterate (RBI) system is an AI-powered strategy factory:
 
-1. **Research** -- LLM (Grok-4-Fast) generates trading strategy ideas from prompts
-2. **Backtest** -- Each idea is automatically coded, backtested on 5-year OHLCV data (BTC/ETH/SOL, 1h+4h), and scored on a composite metric (Sharpe, return, drawdown, win rate)
+1. **Research** -- LLM generates trading strategy ideas from prompts
+2. **Backtest** -- Each idea is automatically coded, backtested on 5-year OHLCV data (BTC/ETH/SOL), and scored on a composite metric (Sharpe, return, drawdown, win rate)
 3. **Iterate** -- Top performers are optimized over 6 iterations with parameter sweeps
-4. **Qualify** -- Strategies passing thresholds (Sharpe > 0.8, DD > -8%, trades >= 20) graduate to `winners/`
-5. **Deploy** -- Manual sweep optimization and Monte Carlo validation before adding to the live portfolio
-
-**17 batches completed (bull), 14 batches (bear).** 69 bull winners, 43 bear winners produced.
+4. **Qualify** -- Strategies passing thresholds graduate to `winners/`
+5. **Deploy** -- Sweep optimization and walk-forward validation before adding to live portfolio
 
 ## Live Trading Features
 
-- **Regime-aware**: Bull strategies go long, bear strategies go short. All strategies self-gate via SMA200.
-- **Risk management**: Per-strategy risk overrides (0.5-1.5%), phase-based scaling, daily DD halt (3%), total DD kill switch (7%).
-- **Exchange safety**: Fill verification on every order, position reconciliation every tick, atomic stop modification (place-first-then-cancel), targeted stop cancellation for shared assets.
-- **Dashboard**: Streamlit war room with TradingView live charts, glassmorphism UI, equity curve, strategy grid, real-time P&L.
+- **3-regime system**: Bull strategies go long, sideways strategies capture range, bear strategies go short. All self-gate via SMA200.
+- **Risk management**: Per-strategy risk overrides, global risk scale (85%), phase-based leverage, daily DD halt (3%), total DD kill switch (7%).
+- **Portfolio safety**: Per-asset exposure caps (5-6%), aggregate exposure cap (15%), DD-budget leverage optimization.
+- **Exchange safety**: Fill verification on every order, position reconciliation every tick, atomic stop modification (place-first-then-cancel).
+- **Cloud deployment**: systemd services on VPS, auto-restart on crash, auto-start on reboot.
+- **Dashboard**: Streamlit war room with TradingView live charts, glassmorphism UI, equity curve, strategy grid.
 - **Telegram**: Entry/exit alerts, daily summaries, command interface (/positions, /status, /stats).
 
 ## Risk Controls
@@ -158,9 +181,9 @@ The Research-Backtest-Iterate (RBI) system is an AI-powered strategy factory:
 |---------|---------------|-----------|--------|
 | Daily drawdown | 3% | 5% | +2% |
 | Total drawdown | 7% | 10% | +3% |
-| Leverage | 1-2.5x | 100x | 97.5x |
-| MC 95th DD (bull) | -6.19% | -10% | +3.81% |
-| MC 95th DD (bear) | -7.83% | -10% | +2.17% |
+| Leverage | 1-1.5x | 100x | 98.5x |
+| Global risk scale | 0.85x | -- | 15% haircut |
+| Per-asset cap | 5-6% | -- | Concentration protection |
 
 ## Setup
 
@@ -170,15 +193,15 @@ git clone https://github.com/DevAntsa/DevAntsa-Algo-Public.git
 cd DevAntsa-Algo-Public
 
 # Environment
-conda create -n tflow python=3.10
+conda create -n tflow python=3.11
 conda activate tflow
 pip install -r requirements.txt
 
 # Configuration
 cp .env_example .env
-# Edit .env with your API keys (Binance, Telegram, OpenRouter)
+# Edit .env with your API keys (Binance, Telegram)
 
-# Run live trading
+# Run live trading (locally or on VPS)
 python -m DevAntsa_Lab.live_trading.engine.main_loop
 
 # Run dashboard (separate terminal)
@@ -187,10 +210,11 @@ streamlit run DevAntsa_Lab/live_trading/dashboard.py
 
 ## Tech Stack
 
-- **Python 3.10** with backtesting.py, pandas, pandas_ta, numpy
+- **Python 3.11** with backtesting.py, pandas, pandas_ta, numpy
 - **Binance Futures API** (demo + live)
+- **Hetzner Cloud / any VPS** for 24/7 deployment (~$8/month)
+- **systemd** for process management
 - **Streamlit + Plotly + TradingView** for dashboard
-- **Grok-4-Fast via OpenRouter** for RBI strategy generation
 - **Telegram Bot API** for notifications
 
 ---
