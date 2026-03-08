@@ -51,6 +51,8 @@ from DevAntsa_Lab.live_trading.config import (
     BEAR_PHASE_RISK_MULTIPLIER,
     BINANCE_MARGIN_TYPE,
     TRADE_LOG_FILE,
+    GLOBAL_RISK_SCALE,
+    STRATEGY_RISK_SCALE,
 )
 from DevAntsa_Lab.live_trading.notifications.telegram_notifier import (
     notify_entry, notify_exit, notify_partial_exit, notify_emergency,
@@ -509,9 +511,9 @@ class TradingLoop:
 
         log_tick_start(self._tick_count, list(eligible))
 
-        # -- Regime change detection (display only — gate DISABLED in v10) -----
+        # -- Regime change detection (display only — gate DISABLED) -----
         # No Telegram alert or console log — regime is informational only,
-        # all 15 strategies self-gate via SMA200. Removed to avoid confusion.
+        # all 8 v11 strategies self-gate via SMA200. Removed to avoid confusion.
         # check_regime_change(market_regime)
         # if self._last_regime is not None and market_regime != self._last_regime:
         #     log_regime_change(self._last_regime, market_regime)
@@ -541,7 +543,7 @@ class TradingLoop:
         if not halt_entries:
             pending_signals = self.signal_engine.collect_signals(eligible)
             resolved = self.conflict_resolver.resolve(pending_signals, open_positions)
-            # Regime gate disabled (v10): all 15 strategies are self-gating via SMA200
+            # Regime gate disabled: all 8 v11 strategies are self-gating via SMA200
             # resolved = self.regime_gate.filter_signals(resolved, market_regime)
 
             for signal in resolved:
@@ -597,13 +599,31 @@ class TradingLoop:
         else:
             effective_leverage = min(phase_leverage, strategy_cap)
 
-        # Risk: per-strategy override (both regimes). Bears scale by phase multiplier.
-        base_risk = STRATEGY_RISK_OVERRIDES.get(signal.strategy_name, RISK_PER_TRADE)
+        # Risk: prefer per-signal risk from metadata, fallback to per-strategy override.
+        # v11 multi-signal strategies carry risk_pct in Signal.metadata.
+        if signal.metadata and "risk_pct" in signal.metadata:
+            base_risk = signal.metadata["risk_pct"]
+        else:
+            base_risk = STRATEGY_RISK_OVERRIDES.get(signal.strategy_name, RISK_PER_TRADE)
+        # Apply global portfolio scale and per-strategy scale
+        base_risk *= GLOBAL_RISK_SCALE
+        base_risk *= STRATEGY_RISK_SCALE.get(signal.strategy_name, 1.0)
         if is_bear:
             phase_mult = BEAR_PHASE_RISK_MULTIPLIER.get(phase, 1.0)
             risk_pct = base_risk * phase_mult
         else:
             risk_pct = base_risk
+
+        # Portfolio-level exposure safety checks
+        open_positions = self.position_manager.positions
+        if not self.risk_manager.check_asset_exposure(
+            signal.asset, risk_pct, open_positions, equity,
+        ):
+            log_signal_skip(signal.strategy_name, f"Asset exposure cap reached for {signal.asset}")
+            return
+        if not self.risk_manager.check_aggregate_exposure(risk_pct, open_positions):
+            log_signal_skip(signal.strategy_name, "Aggregate portfolio exposure cap reached")
+            return
 
         # Stop distance from signal
         stop_distance_pct = signal.stop_distance_pct
@@ -731,6 +751,8 @@ class TradingLoop:
                 "position_size_usd": position_size_usd,
                 "effective_leverage": effective_leverage,
                 "risk_pct": risk_pct,
+                # v11: merge strategy signal metadata (initial_stop_dist, partial_stage, etc.)
+                **(signal.metadata if signal.metadata else {}),
             },
         )
         self.position_manager.add_position(position)
@@ -780,6 +802,10 @@ class TradingLoop:
 
             position.remaining_qty -= self.executor._round_qty(position.asset, close_qty)
             position.tp1_hit = True
+            # v11: update position metadata from exit signal (partial_stage tracking)
+            update_meta = exit_sig.metadata.get("update_metadata") if exit_sig.metadata else None
+            if update_meta:
+                position.metadata.update(update_meta)
             fill_price = float(order.get("avgPrice", 0))
             if fill_price == 0:
                 fill_price = self.executor.get_ticker(position.asset)["price"]

@@ -1,8 +1,7 @@
 """
-Strategy Modules -- Framework with Example Strategy
-====================================================
-Extend StrategyBase to build your own strategies.
-See example_sma_crossover.py for a complete template.
+Strategy Modules -- Base classes only
+======================================
+v10 strategies are disabled. v11 strategies live in strategies_v11/.
+Only StrategyBase is exported here for import by v11 strategies.
 """
 from DevAntsa_Lab.live_trading.strategies.base import StrategyBase
-from DevAntsa_Lab.live_trading.strategies.example_sma_crossover import ExampleSMACrossover

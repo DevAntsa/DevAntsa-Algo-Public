@@ -63,7 +63,7 @@ def print_banner():
         Text.from_markup(
             f"{BRAND}\n"
             "[dim]Precision trading, systematic execution[/dim]\n\n"
-            "[cyan]15 Strategies[/cyan] • [green]6 Bull[/green] • [red]9 Bear[/red] • [dim]Portfolio v10[/dim]"
+            "[cyan]8 Strategies[/cyan] • [green]2 Bull[/green] • [cyan]3 Sideways[/cyan] • [red]3 Bear[/red] • [dim]Portfolio v11[/dim]"
         ),
         title="[bold white]Live Trading System[/bold white]",
         border_style="cyan",
@@ -110,7 +110,7 @@ def print_status_table(
         "Regime", f"[{regime_color}]{regime}[/{regime_color}]",
     )
     table.add_row(
-        "Positions", f"[white]{positions}/15[/white]",
+        "Positions", f"[white]{positions}/8[/white]",
         "DD", f"[yellow]Daily: {daily_dd:.2f}% | Total: {total_dd:.2f}%[/yellow]",
     )
 

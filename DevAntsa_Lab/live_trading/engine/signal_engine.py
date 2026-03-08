@@ -1,10 +1,11 @@
 """
-Signal Engine -- Trading Framework
-====================================
+Signal Engine -- Portfolio v11 (8 strategies, 3 regimes)
+========================================================
 Iterates all active strategies x assets and collects entry/exit signals.
-Supports eligible_strategies filter for timeframe gating (Decision 1).
+Supports eligible_strategies filter for timeframe gating.
 
-Replace the example strategy with your own strategies.
+This is the public framework version. Import your own strategies below.
+See strategies/example_sma_crossover.py for a working template.
 """
 
 from __future__ import annotations
@@ -13,8 +14,8 @@ import logging
 import pandas as pd
 
 from DevAntsa_Lab.live_trading.strategies.base import StrategyBase, Signal, ExitSignal
-# Replace with your own strategy imports
-from DevAntsa_Lab.live_trading.strategies.example_sma_crossover import ExampleSMACrossover
+# Import your strategies here:
+from DevAntsa_Lab.live_trading.strategies.example_sma_crossover import SmaCrossoverStrategy
 from DevAntsa_Lab.live_trading.config import STRATEGY_ASSETS
 
 logger = logging.getLogger(__name__)
@@ -32,9 +33,9 @@ class SignalEngine:
         """
         self.data_fetcher = data_fetcher
 
-        # Replace with your own strategy instances
+        # Register your strategies here:
         self.strategies: List[StrategyBase] = [
-            ExampleSMACrossover(),       # SOL-4h  (textbook SMA crossover, zero alpha)
+            SmaCrossoverStrategy(),    # Example -- replace with your own
         ]
 
     def collect_signals(
@@ -55,17 +56,18 @@ class SignalEngine:
             for asset in strategy.assets:
                 try:
                     df = self.data_fetcher.get_ohlcv(asset, strategy.timeframe, limit=strategy.min_bars)
-                except Exception as exc:
-                    logger.warning("Data fetch failed for %s %s (%s) — skipping", strategy.name, asset, exc)
-                    continue
-                if df is None or len(df) == 0:
-                    continue
+                    if df is None or len(df) < strategy.min_bars:
+                        logger.debug("Insufficient data for %s on %s", strategy.name, asset)
+                        continue
 
-                strategy.compute_indicators(df)
-                signal = strategy.check_entry(df)
-                if signal is not None:
-                    signal.asset = asset
-                    pending.append(signal)
+                    df = strategy.compute_indicators(df)
+                    signal = strategy.check_entry(df)
+                    if signal is not None:
+                        signal.asset = asset
+                        pending.append(signal)
+
+                except Exception as e:
+                    logger.error("Signal check failed for %s on %s: %s", strategy.name, asset, e)
 
         return pending
 
@@ -75,44 +77,41 @@ class SignalEngine:
         eligible_strategies: Optional[Set[str]] = None,
     ) -> List[ExitSignal]:
         """
-        For each open position (whose strategy is eligible), check exit conditions.
-        Also updates trailing stops in-place on positions.
+        Check all open positions for exit signals (full close, partial close, trail update).
         """
         exit_signals: List[ExitSignal] = []
 
-        for position in open_positions:
-            if eligible_strategies is not None and position.strategy_name not in eligible_strategies:
-                continue
+        strategy_map = {s.name: s for s in self.strategies}
 
-            strategy = self._get_strategy(position.strategy_name)
+        for position in open_positions:
+            strategy = strategy_map.get(position.strategy_name)
             if strategy is None:
+                continue
+            if eligible_strategies is not None and strategy.name not in eligible_strategies:
                 continue
 
             try:
                 df = self.data_fetcher.get_ohlcv(position.asset, strategy.timeframe, limit=strategy.min_bars)
-            except Exception as exc:
-                logger.warning("Data fetch failed for exit check %s %s (%s) — skipping", position.strategy_name, position.asset, exc)
-                continue
-            if df is None or len(df) == 0:
-                continue
+                if df is None or len(df) < strategy.min_bars:
+                    continue
 
-            strategy.compute_indicators(df)
+                df = strategy.compute_indicators(df)
 
-            # Trailing stop update (before exit check)
-            if strategy.has_trailing_stop:
+                # Check for exit signal
+                exit_sig = strategy.check_exit(df, position)
+                if exit_sig is not None:
+                    exit_signals.append(exit_sig)
+                    continue  # Don't trail if exiting
+
+                # Update trailing stop
                 new_stop = strategy.calculate_trail(df, position)
-                if new_stop is not None:
-                    position.current_stop = new_stop
+                if new_stop is not None and new_stop > 0:
+                    if position.direction == "LONG" and new_stop > position.current_stop:
+                        position.current_stop = new_stop
+                    elif position.direction == "SHORT" and (position.current_stop == 0 or new_stop < position.current_stop):
+                        position.current_stop = new_stop
 
-            # Exit check
-            exit_sig = strategy.check_exit(df, position)
-            if exit_sig is not None:
-                exit_signals.append(exit_sig)
+            except Exception as e:
+                logger.error("Exit check failed for %s on %s: %s", position.strategy_name, position.asset, e)
 
         return exit_signals
-
-    def _get_strategy(self, name: str) -> Optional[StrategyBase]:
-        for s in self.strategies:
-            if s.name == name:
-                return s
-        return None

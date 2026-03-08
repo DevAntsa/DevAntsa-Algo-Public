@@ -407,7 +407,7 @@ def _handle_status(position_manager, risk_manager, equity, regime):
 
     pos_count = len(position_manager.positions)
     regime_counts = position_manager.regime_counts()
-    lines.append(f"\U0001f4cb *Positions:* `{pos_count}/15` (bull:{regime_counts.get('bull',0)}/6 bear:{regime_counts.get('bear',0)}/9)")
+    lines.append(f"\U0001f4cb *Positions:* `{pos_count}/8` (bull:{regime_counts.get('bull',0)}/2 side:{regime_counts.get('sideways',0)}/3 bear:{regime_counts.get('bear',0)}/3)")
 
     send_telegram("\n".join(lines))
 
@@ -702,7 +702,7 @@ def send_test_notifications():
         f"*Losing days:* `0/5`\n"
         f"\n"
         f"\U0001f7e2 *Regime gate:* `NEUTRAL`\n"
-        f"\U0001f4cb *Positions:* `1/15` (bull:0/6 bear:1/9)"
+        f"\U0001f4cb *Positions:* `1/8` (bull:0/2 side:0/3 bear:1/3)"
     )
     send_telegram(text)
     print("  Sent: Sample /status")

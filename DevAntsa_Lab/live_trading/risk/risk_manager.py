@@ -27,6 +27,9 @@ from DevAntsa_Lab.live_trading.config import (
     BACKTEST_MAX_DD,
     ACCOUNT_MODE,
     STRATEGY_LEVERAGE_CAPS,
+    MAX_ASSET_EXPOSURE_PCT,
+    MAX_ASSET_EXPOSURE_DEFAULT,
+    MAX_AGGREGATE_EXPOSURE_PCT,
 )
 
 logger = logging.getLogger(__name__)
@@ -121,6 +124,52 @@ class RiskManager:
         if caps is None:
             return DEFAULT_LEVERAGE
         return caps.get(self.account_mode)
+
+    # ── Portfolio-Level Exposure Safety ──────────────────────────────────
+
+    def check_asset_exposure(
+        self, asset: str, new_risk_pct: float,
+        open_positions: List, equity: float,
+    ) -> bool:
+        """
+        Check if adding a new position would exceed the per-asset exposure cap.
+
+        Sums risk_pct of all open positions on the same asset plus the new one.
+        Returns True if within limits, False if blocked.
+        """
+        cap = MAX_ASSET_EXPOSURE_PCT.get(asset, MAX_ASSET_EXPOSURE_DEFAULT)
+        existing_risk = sum(
+            (p.metadata or {}).get("risk_pct", 0.0) for p in open_positions
+            if getattr(p, "asset", None) == asset
+        )
+        total = existing_risk + new_risk_pct
+        if total > cap:
+            logger.warning(
+                "ASSET CAP: %s total risk %.2f%% + new %.2f%% = %.2f%% > cap %.2f%% — BLOCKED",
+                asset, existing_risk * 100, new_risk_pct * 100,
+                total * 100, cap * 100,
+            )
+            return False
+        return True
+
+    def check_aggregate_exposure(
+        self, new_risk_pct: float, open_positions: List,
+    ) -> bool:
+        """
+        Check if adding a new position would exceed aggregate portfolio risk cap.
+
+        Returns True if within limits, False if blocked.
+        """
+        existing_risk = sum((p.metadata or {}).get("risk_pct", 0.0) for p in open_positions)
+        total = existing_risk + new_risk_pct
+        if total > MAX_AGGREGATE_EXPOSURE_PCT:
+            logger.warning(
+                "AGGREGATE CAP: total risk %.2f%% + new %.2f%% = %.2f%% > cap %.2f%% — BLOCKED",
+                existing_risk * 100, new_risk_pct * 100,
+                total * 100, MAX_AGGREGATE_EXPOSURE_PCT * 100,
+            )
+            return False
+        return True
 
     # ── Daily DD Tracking (Plan Part 4) ─────────────────────────────────
 

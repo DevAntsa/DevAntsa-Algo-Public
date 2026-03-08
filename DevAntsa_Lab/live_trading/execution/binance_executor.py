@@ -142,8 +142,14 @@ class BinanceExecutor:
         data = resp.json()
         # Binance error format: {"code": -1XXX, "msg": "..."}
         if isinstance(data, dict) and "code" in data and int(data["code"]) < 0:
-            logger.error("Binance API error: %s %s", data["code"], data.get("msg", ""))
-            raise RuntimeError(f"Binance API error {data['code']}: {data.get('msg', '')}")
+            code = int(data["code"])
+            msg = data.get("msg", "")
+            # -4046 "No need to change margin type" is expected and handled by caller
+            if code == -4046:
+                logger.debug("Binance API: %s %s", code, msg)
+            else:
+                logger.error("Binance API error: %s %s", code, msg)
+            raise RuntimeError(f"Binance API error {code}: {msg}")
         resp.raise_for_status()
         return data
 

@@ -1,19 +1,15 @@
 """
-Regime Gate — Portfolio v10
+Regime Gate — Portfolio v11
 ===========================
-Lightweight BTC EMA slope gate that blocks LONG entries from loose strategies
-when the market is clearly bearish.
+Lightweight BTC EMA slope gate for market regime classification.
 
 BEARISH requires BOTH conditions (loosened to avoid blocking during V-reversals):
     1. EMA-50 slope over 5 bars < -0.5%  (trend is declining)
     2. Current close < EMA-50             (price hasn't reclaimed yet)
 
-If price reclaims above EMA while slope is still negative, gate lifts to NEUTRAL
-so LONG strategies can catch the reversal.
-
-Portfolio v10: All 15 strategies are self-gating (Close > SMA200 for bull,
-Close < SMA200 for bear). The regime gate provides an additional safety layer
-for bull LONGs during sharp bear turns where SMA200 hasn't caught up yet.
+Portfolio v11: All 8 strategies are self-gating (Close > SMA200 for bull/sideways,
+Close < SMA200 for bear). No strategies are gated here -- the regime gate
+provides classification only (BULLISH/BEARISH/NEUTRAL for display).
 """
 
 from __future__ import annotations
@@ -23,7 +19,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Strategies whose LONG entries get blocked in BEARISH regime
-GATED_STRATEGIES = {"DualROCAlignment", "VolSpikeBreakout"}
+# v11: no strategies gated here -- all v11 strategies are self-gating
+# (Close > SMA200 for bull/sideways, Close < SMA200 for bear)
+GATED_STRATEGIES: set = set()
 
 # EMA parameters
 EMA_PERIOD = 50        # ~8.3 days on 4H

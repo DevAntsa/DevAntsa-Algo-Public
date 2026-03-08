@@ -1,8 +1,8 @@
 """
 DevAntsa Lab -- Live Trading Dashboard
 =======================================
-Portfolio v10 war room: single-page Streamlit app for monitoring 15 strategies
-across bull/bear regimes on Binance Futures Demo.
+Portfolio v11 war room: single-page Streamlit app for monitoring 8 strategies
+across bull/sideways/bear regimes on Binance Futures Demo.
 
 Run separately from main_loop:
     streamlit run DevAntsa_Lab/live_trading/dashboard.py
@@ -39,6 +39,7 @@ from DevAntsa_Lab.live_trading.config import (
     MAX_POSITIONS_PER_REGIME, STATE_FILE, TRADE_LOG_FILE,
     DAILY_DD_LIMIT_PERSONAL, TOTAL_DD_LIMIT_PERSONAL,
     DD_ACTION_REVIEW, DD_ACTION_REDUCE, DD_ACTION_STOP_DAY, DD_ACTION_CLOSE_ALL,
+    GLOBAL_RISK_SCALE, STRATEGY_RISK_SCALE,
 )
 
 # ---------------------------------------------------------------------------
@@ -46,32 +47,35 @@ from DevAntsa_Lab.live_trading.config import (
 # ---------------------------------------------------------------------------
 REFRESH_SECONDS = 60
 
-BULL_STRATEGIES = [
-    "SteepeningSlopeBreakout", "DualROCAlignment", "DirectionalIgnition",
-    "ATRExpansionBreakout", "DIBreakoutPyramid", "TripleMomentum",
-]
-BEAR_STRATEGIES = [
-    "StructuralFade", "BearishLowerHigh", "AccelBreakdown",
-    "EMARejectionADX", "MFIDistribution", "PanicAcceleration",
-    "ExpansionBreakdown", "WorseningMomentum", "ExpandingBodyBear",
-]
-ALL_STRATEGIES = BULL_STRATEGIES + BEAR_STRATEGIES
+BULL_STRATEGIES = ["ElasticMultiSignal", "DonchianModern"]
+SIDEWAYS_STRATEGIES = ["MultiSignalCCI", "DailyCCI", "EMABounce"]
+BEAR_STRATEGIES = ["ExitMicroTune", "BCDExitTune", "PanicSweepOpt"]
+ALL_STRATEGIES = BULL_STRATEGIES + SIDEWAYS_STRATEGIES + BEAR_STRATEGIES
 
 STRATEGY_REGIME = {}
 for s in BULL_STRATEGIES:
     STRATEGY_REGIME[s] = "bull"
+for s in SIDEWAYS_STRATEGIES:
+    STRATEGY_REGIME[s] = "sideways"
 for s in BEAR_STRATEGIES:
     STRATEGY_REGIME[s] = "bear"
 
 BACKTEST_SHARPE = {
-    "SteepeningSlopeBreakout": 1.48, "DualROCAlignment": 1.21,
-    "DirectionalIgnition": 1.23, "ATRExpansionBreakout": 1.22,
-    "DIBreakoutPyramid": 1.23, "TripleMomentum": 1.14,
-    "StructuralFade": 1.46, "BearishLowerHigh": 1.44,
-    "AccelBreakdown": 1.35, "EMARejectionADX": 1.21,
-    "MFIDistribution": 1.12, "PanicAcceleration": 1.19,
-    "ExpansionBreakdown": 0.79, "WorseningMomentum": 1.13,
-    "ExpandingBodyBear": 1.065,
+    # Bull
+    "ElasticMultiSignal": 1.61, "DonchianModern": 1.35,
+    # Sideways
+    "MultiSignalCCI": 1.92, "DailyCCI": 1.38, "EMABounce": 0.95,
+    # Bear
+    "ExitMicroTune": 1.22, "BCDExitTune": 1.10, "PanicSweepOpt": 1.17,
+}
+
+BACKTEST_RETURN = {
+    # Bull
+    "ElasticMultiSignal": 201.0, "DonchianModern": 58.0,
+    # Sideways
+    "MultiSignalCCI": 135.3, "DailyCCI": 41.3, "EMABounce": 24.8,
+    # Bear
+    "ExitMicroTune": 75.4, "BCDExitTune": 45.0, "PanicSweepOpt": 45.8,
 }
 
 ASSET_SYMBOLS = {"BTC": "BTCUSDT", "ETH": "ETHUSDT", "SOL": "SOLUSDT"}
@@ -79,6 +83,8 @@ TV_SYMBOLS = {"BTC": "BINANCE:BTCUSDT.P", "ETH": "BINANCE:ETHUSDT.P", "SOL": "BI
 ASSET_COLORS = {"BTC": "#F7931A", "ETH": "#627EEA", "SOL": "#9945FF"}
 TV_GREEN = "#089981"
 TV_RED = "#F23645"
+TV_AMBER = "#FFC107"
+TV_CYAN = "#00BCD4"
 
 CHART_LAYOUT = dict(
     paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
@@ -132,6 +138,7 @@ st.markdown("""
     .badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.7rem;
              font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-family: 'Inter', sans-serif; }
     .badge-bull { background: rgba(8,153,129,0.15); color: #089981; box-shadow: 0 0 8px rgba(8,153,129,0.1); }
+    .badge-sideways { background: rgba(0,188,212,0.15); color: #00BCD4; box-shadow: 0 0 8px rgba(0,188,212,0.1); }
     .badge-bear { background: rgba(242,54,69,0.15); color: #F23645; box-shadow: 0 0 8px rgba(242,54,69,0.1); }
     .badge-neutral { background: rgba(120,123,134,0.15); color: #787B86; }
     .badge-building { background: rgba(0,188,212,0.15); color: #00BCD4; box-shadow: 0 0 8px rgba(0,188,212,0.1); }
@@ -170,6 +177,8 @@ st.markdown("""
     .strat-card:hover { transform: translateY(-1px); box-shadow: 0 4px 24px rgba(0,0,0,0.3); }
     .strat-card-bull { border-left-color: #089981; }
     .strat-card-bull:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.3), 0 0 12px rgba(8,153,129,0.06); }
+    .strat-card-sideways { border-left-color: #00BCD4; }
+    .strat-card-sideways:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.3), 0 0 12px rgba(0,188,212,0.06); }
     .strat-card-bear { border-left-color: #F23645; }
     .strat-card-bear:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.3), 0 0 12px rgba(242,54,69,0.06); }
 
@@ -196,7 +205,6 @@ st.markdown("""
         50% { box-shadow: 0 0 40px rgba(242,54,69,0.2); }
     }
     .empty-state { text-align: center; padding: 30px 20px; color: #4A4D57; font-size: 0.85rem; }
-
 
     /* Radio tabs styling */
     div[data-testid="stRadio"] > div { flex-direction: row !important; gap: 4px !important; }
@@ -445,10 +453,15 @@ def _dd_action(daily_dd_pct):
     return "NORMAL"
 
 
+def _regime_color(regime):
+    return {"bull": TV_GREEN, "sideways": TV_CYAN, "bear": TV_RED}.get(regime, "#787B86")
+
+
 # ---------------------------------------------------------------------------
 # STATIC: Header
 # ---------------------------------------------------------------------------
 def render_header():
+    risk_scale_pct = int(GLOBAL_RISK_SCALE * 100)
     st.markdown(
         '<div class="header-bar">'
         # Left: title + live pill
@@ -466,8 +479,10 @@ def render_header():
         '</div>'
         # Right: info chips
         '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">'
-        '<span class="header-chip header-chip-accent">v10</span>'
-        '<span class="header-chip">15 strategies</span>'
+        '<span class="header-chip header-chip-accent">v11</span>'
+        '<span class="header-chip">8 strategies</span>'
+        '<span class="header-chip">3 regimes</span>'
+        f'<span class="header-chip">Risk {risk_scale_pct}%</span>'
         '<span class="header-chip">Binance Demo</span>'
         '</div>'
         '</div>',
@@ -594,7 +609,7 @@ def _render_metrics(data):
     with c2:
         dd_val = daily_dd or 0
         fill = min(dd_val / (DAILY_DD_LIMIT_PERSONAL * 100), 1.0) * 100
-        bar_c = TV_GREEN if dd_val < 1.5 else ("#FFC107" if dd_val < 2.5 else TV_RED)
+        bar_c = TV_GREEN if dd_val < 1.5 else (TV_AMBER if dd_val < 2.5 else TV_RED)
         st.markdown(f'<div class="metric-card"><div class="metric-label">Daily DD</div>'
                     f'<div class="metric-value {_pnl_class(-(daily_dd or 0))}">-{_fmt_pct(dd_val)}</div>'
                     f'<div class="progress-bar-track"><div class="progress-bar-fill" style="width:{fill:.0f}%;background:{bar_c};"></div></div>'
@@ -604,7 +619,7 @@ def _render_metrics(data):
     with c3:
         td_val = total_dd or 0
         fill_t = min(td_val / (TOTAL_DD_LIMIT_PERSONAL * 100), 1.0) * 100
-        bar_t = TV_GREEN if td_val < 3 else ("#FFC107" if td_val < 5 else TV_RED)
+        bar_t = TV_GREEN if td_val < 3 else (TV_AMBER if td_val < 5 else TV_RED)
         st.markdown(f'<div class="metric-card"><div class="metric-label">Total DD</div>'
                     f'<div class="metric-value {_pnl_class(-(total_dd or 0))}">-{_fmt_pct(td_val)}</div>'
                     f'<div class="progress-bar-track"><div class="progress-bar-fill" style="width:{fill_t:.0f}%;background:{bar_t};"></div></div>'
@@ -652,6 +667,7 @@ def _render_status_strip(data):
     positions = state.get("positions", []) if state else []
     n_pos = len(positions)
     n_bull = sum(1 for p in positions if STRATEGY_REGIME.get(p.get("strategy"), "") == "bull")
+    n_side = sum(1 for p in positions if STRATEGY_REGIME.get(p.get("strategy"), "") == "sideways")
     n_bear = sum(1 for p in positions if STRATEGY_REGIME.get(p.get("strategy"), "") == "bear")
 
     # Kill switch
@@ -694,7 +710,9 @@ def _render_status_strip(data):
         st.markdown(f'<div class="card"><div class="metric-label">Positions</div>'
                     f'<div class="metric-value" style="font-size:1.2rem;">{n_pos}/{MAX_TOTAL_POSITIONS}</div>'
                     f'<div style="color:#787B86;font-size:0.65rem;margin-top:4px;">'
-                    f'Bull {n_bull}/{MAX_POSITIONS_PER_REGIME["bull"]} | Bear {n_bear}/{MAX_POSITIONS_PER_REGIME["bear"]}</div></div>',
+                    f'<span style="color:{TV_GREEN};">Bull {n_bull}/{MAX_POSITIONS_PER_REGIME["bull"]}</span>'
+                    f' | <span style="color:{TV_CYAN};">Side {n_side}/{MAX_POSITIONS_PER_REGIME["sideways"]}</span>'
+                    f' | <span style="color:{TV_RED};">Bear {n_bear}/{MAX_POSITIONS_PER_REGIME["bear"]}</span></div></div>',
                     unsafe_allow_html=True)
     with c4:
         st.markdown(f'<div class="card"><div class="metric-label">Kill Switch</div>'
@@ -744,7 +762,8 @@ def _render_positions(data):
     for pos in positions:
         strategy = pos.get("strategy", "?")
         asset = pos.get("asset", "?")
-        tf = {"60": "1h", "240": "4h"}.get(STRATEGY_TIMEFRAMES.get(strategy, "?"), "?")
+        tf_map = {"60": "1h", "240": "4h", "D": "D"}
+        tf = tf_map.get(STRATEGY_TIMEFRAMES.get(strategy, "?"), "?")
         direction = pos.get("direction", "?")
         entry_price = pos.get("entry_price", 0)
         stop = pos.get("stop_price", 0)
@@ -758,9 +777,12 @@ def _render_positions(data):
         upnl_pct = (upnl / entry_price * 100) if entry_price else 0
         risk_pu = abs(entry_price - stop) if stop else 0
         r_mult = upnl / risk_pu if risk_pu > 0 else 0
-        r_color = TV_GREEN if r_mult >= 1 else ("#FFC107" if r_mult >= 0 else TV_RED)
+        r_color = TV_GREEN if r_mult >= 1 else (TV_AMBER if r_mult >= 0 else TV_RED)
+        regime = STRATEGY_REGIME.get(strategy, "?")
+        regime_c = _regime_color(regime)
         d_dot = f'<span style="color:{TV_GREEN if direction=="LONG" else TV_RED};">{"^" if direction=="LONG" else "v"}</span>'
-        rows += (f'<tr><td>{d_dot}</td><td style="font-weight:500;">{strategy}</td>'
+        regime_dot = f'<span style="color:{regime_c};font-size:0.65rem;">{regime[0].upper()}</span>'
+        rows += (f'<tr><td>{d_dot}{regime_dot}</td><td style="font-weight:500;">{strategy}</td>'
                  f'<td>{asset.replace("USDT","")}({tf})</td><td>${entry_price:,.2f}</td>'
                  f'<td>${current:,.2f}</td><td class="{_pnl_class(upnl)}">{_fmt_money(upnl_dollar, sign=True)} ({_fmt_pct(upnl_pct, sign=True)})</td>'
                  f'<td>${stop:,.2f}</td><td style="color:{r_color};font-weight:500;">{r_mult:.1f}R</td><td>{bars}</td></tr>')
@@ -781,19 +803,30 @@ def _render_strategy_grid(data):
     tickers = data["tickers"]
     pos_map = {p.get("strategy"): p for p in positions}
 
+    # Group by regime for section headers
+    regime_groups = [
+        ("Bull", BULL_STRATEGIES, TV_GREEN),
+        ("Sideways", SIDEWAYS_STRATEGIES, TV_CYAN),
+        ("Bear", BEAR_STRATEGIES, TV_RED),
+    ]
+
     cards = []
     for strat in ALL_STRATEGIES:
         regime = STRATEGY_REGIME[strat]
         asset = STRATEGY_ASSETS.get(strat, ["?"])[0]
         asset_short = asset.replace("USDT", "")
-        tf = {"60": "1h", "240": "4h"}.get(STRATEGY_TIMEFRAMES.get(strat, "240"), "4h")
+        tf_map = {"60": "1h", "240": "4h", "D": "D"}
+        tf = tf_map.get(STRATEGY_TIMEFRAMES.get(strat, "240"), "4h")
         sharpe = BACKTEST_SHARPE.get(strat, 0)
         bt_dd = BACKTEST_MAX_DD.get(strat, 0) * 100
+        bt_ret = BACKTEST_RETURN.get(strat, 0)
         risk = STRATEGY_RISK_OVERRIDES.get(strat, 0.005) * 100
+        risk_scale = STRATEGY_RISK_SCALE.get(strat, 1.0)
+        eff_risk = risk * GLOBAL_RISK_SCALE * risk_scale
         pos = pos_map.get(strat)
         is_active = pos is not None
         status = '<span class="badge badge-active">ACTIVE</span>' if is_active else '<span class="badge badge-watching">WATCHING</span>'
-        regime_b = f'<span class="badge badge-{"bull" if regime=="bull" else "bear"}">{regime.upper()}</span>'
+        regime_b = f'<span class="badge badge-{regime}">{regime.upper()}</span>'
         pos_info = ""
         if is_active:
             entry = pos.get("entry_price", 0)
@@ -812,7 +845,8 @@ def _render_strategy_grid(data):
                      f'<span style="color:#F8F9FD;font-weight:500;font-size:0.82rem;">{strat}</span>{status}</div>'
                      f'<div style="margin-top:4px;display:flex;gap:6px;align-items:center;">{regime_b}'
                      f'<span style="color:#787B86;font-size:0.7rem;">{asset_short}-{tf}</span></div>'
-                     f'<div style="margin-top:6px;font-size:0.68rem;color:#4A4D57;">S={sharpe:.2f} | DD=-{bt_dd:.1f}% | Risk={risk:.1f}%</div>'
+                     f'<div style="margin-top:6px;font-size:0.68rem;color:#4A4D57;">'
+                     f'S={sharpe:.2f} | +{bt_ret:.0f}% | DD=-{bt_dd:.1f}% | Risk={eff_risk:.2f}%</div>'
                      f'{pos_info}</div>')
 
     for i in range(0, len(cards), 3):
@@ -880,7 +914,7 @@ def _render_footer(data):
     state = data["state"]
     saved_at = "---"
     if state:
-        saved_at = state.get("saved_at", "---")
+        saved_at = state.get("saved_at") or "---"
         if saved_at != "---":
             saved_at = saved_at[:19].replace("T", " ") + " UTC"
     st.markdown("---")
@@ -888,7 +922,8 @@ def _render_footer(data):
                 f'<div style="color:#4A4D57;font-size:0.75rem;font-weight:500;">'
                 f'DevAntsa Lab -- Precision trading, systematic execution</div>'
                 f'<div style="color:#2A2E39;font-size:0.65rem;margin-top:4px;">'
-                f'Portfolio v10 | Binance Futures Demo | Live refresh: {REFRESH_SECONDS}s | State saved: {saved_at}</div></div>',
+                f'Portfolio v11 | 8 strategies | 3 regimes | Binance Futures Demo | '
+                f'Live refresh: {REFRESH_SECONDS}s | State saved: {saved_at}</div></div>',
                 unsafe_allow_html=True)
 
 
@@ -936,13 +971,17 @@ def _render_recent_trades():
             action = row.get("action", "?")
             price = float(row["price"]) if pd.notna(row.get("price")) else 0
             reason = row.get("reason", "") if pd.notna(row.get("reason")) else ""
+            regime = STRATEGY_REGIME.get(strat, "?")
+            regime_c = _regime_color(regime)
             d_cls = "positive" if direction == "LONG" else "negative"
             rows += (f'<tr><td style="font-size:0.72rem;color:#4A4D57;">{ts}</td>'
                      f'<td style="font-weight:500;">{strat}</td><td>{asset}</td>'
                      f'<td class="{d_cls}">{action}</td>'
-                     f'<td>${price:,.2f}</td><td style="color:#4A4D57;font-size:0.72rem;">{reason}</td></tr>')
+                     f'<td>${price:,.2f}</td>'
+                     f'<td><span style="color:{regime_c};font-size:0.65rem;">{regime}</span></td>'
+                     f'<td style="color:#4A4D57;font-size:0.72rem;">{reason}</td></tr>')
         st.markdown(f'<table class="pos-table"><thead><tr><th>Time</th><th>Strategy</th><th>Asset</th>'
-                    f'<th>Action</th><th>Price</th><th>Reason</th></tr></thead>'
+                    f'<th>Action</th><th>Price</th><th>Regime</th><th>Reason</th></tr></thead>'
                     f'<tbody>{rows}</tbody></table>', unsafe_allow_html=True)
 
         # Show matched P&L summary if available
