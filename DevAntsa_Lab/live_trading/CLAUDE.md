@@ -12,16 +12,49 @@ Runtime: `C:\Users\luoto\MoneyGlich\moon-dev-ai-agents\DevAntsa_Lab\live_trading
 Development: `C:\Users\luoto\MoneyGlich\DevAntsa-Lab\DevAntsa_Lab\live_trading\`
 IMPORTANT: Both copies must stay in sync. Always update both after changes.
 
-## Run Command
+## Deployment (Hetzner Cloud — since 2026-03-07)
+- **Server:** Hetzner CPX22 (x86, 80GB), Helsinki, ~8.14/month
+- **IP:** 65.109.143.110
+- **SSH:** `ssh root@65.109.143.110`
+- **Services:** systemd (`devantsa-loop.service`, `devantsa-liq.service`) — auto-restart on failure
+- **Conda env:** `/root/miniconda3/envs/tflow/` (Python 3.11)
+- **Code path:** `/root/trading/DevAntsa_Lab/live_trading/`
+
+### Server Management
+```bash
+# SSH into server
+ssh root@65.109.143.110
+
+# Check services
+systemctl status devantsa-loop
+systemctl status devantsa-liq
+
+# View logs
+journalctl -u devantsa-loop -f          # live tail
+journalctl -u devantsa-loop --since "1h ago"
+
+# Restart
+systemctl restart devantsa-loop
+systemctl restart devantsa-liq
+
+# Deploy code updates
+scp -r DevAntsa_Lab/ root@65.109.143.110:/root/trading/
+ssh root@65.109.143.110 "systemctl restart devantsa-loop"
 ```
-cd C:\Users\luoto\MoneyGlich\moon-dev-ai-agents
-conda activate tflow
-python -m DevAntsa_Lab.live_trading.engine.main_loop
+
+### Dashboard (runs locally, syncs data from server)
+```bash
+# From moon-dev-ai-agents directory:
+bash run_dashboard.sh
+# Or manually:
+scp root@65.109.143.110:/root/trading/DevAntsa_Lab/live_trading/data/state.json DevAntsa_Lab/live_trading/data/
+scp root@65.109.143.110:/root/trading/DevAntsa_Lab/live_trading/data/trades.csv DevAntsa_Lab/live_trading/data/
+streamlit run DevAntsa_Lab/live_trading/dashboard.py
 ```
 
 ## Architecture
 - **engine/main_loop.py** — Core trading loop (dynamic tick interval, higher TF strategies gated)
-- **engine/signal_engine.py** — Collects signals from all 8 v11 strategies
+- **engine/signal_engine.py** — Collects signals from all v12 strategies (10 loaded, 9 active)
 - **engine/regime_gate.py** — BTC EMA-50 slope classifier (display only, all strategies self-gate)
 - **engine/position_manager.py** — Tracks open positions, enforces limits
 - **engine/conflict_resolver.py** — Resolves conflicting signals on same asset
@@ -31,21 +64,23 @@ python -m DevAntsa_Lab.live_trading.engine.main_loop
 - **notifications/telegram_notifier.py** — Notifications + commands (/positions, /status, /stats, /help)
 - **utils/console.py** — Rich colored terminal output
 - **data/state_manager.py** — JSON state persistence (positions, candle times)
-- **strategies_v11/** — All 8 v11 strategy implementations + shared indicators
+- **strategies_v11/** — All v12 strategy implementations (11 files) + shared indicators
 - **dashboard.py** — Live trading dashboard (Streamlit)
 
-## 8 Strategies (Portfolio v11 — walk-forward validated, sweep-optimized, deployed 2026-03-05)
+## 9 Strategies (Portfolio v12 — upgraded 2026-03-11)
 
-### Bull LONG (2 strategies)
+### Bull LONG (3 strategies)
 | Strategy | Asset | TF | 5yr Return | Sharpe | DD | WF | Signal Family |
 |----------|-------|----|-----------|--------|-----|-----|---------------|
-| ElasticMultiSignal | SOL | 4h | +201.0% | 1.61 | -8.53% | 85% | 3-signal (CCI+WR+ROC) |
+| EhlersInstantTrend | SOL | 4h | +203.9% | 1.86 | -5.99% | 71% | Ehlers DSP crossover (NEW v12) |
 | DonchianModern | BTC | 4h | +58.0% | 1.35 | -5.60% | 103% | Donchian breakout |
+| VolumeWeightedTSMOM | SOL | 4h | +232.0% | 1.84 | -8.00% | 93% | VW momentum (NEW v12) |
+| ~~ElasticMultiSignal~~ | SOL | 4h | +201.0% | 1.61 | -8.53% | 85% | PENDING REMOVAL (kept for open trades) |
 
 ### Sideways LONG (3 strategies)
 | Strategy | Asset | TF | 5yr Return | Sharpe | DD | WF | Signal Family |
 |----------|-------|----|-----------|--------|-----|-----|---------------|
-| MultiSignalCCI | SOL | 4h | +135.3% | 1.92 | -3.88% | 85% | CCI+WR+ROC portfolio |
+| CrossAssetBTCSignal | SOL | 4h | +138.2% | 1.97 | -3.90% | 90.5% | 4-signal CCI+WR+ROC+BTC (NEW v12) |
 | DailyCCI | SOL | D | +41.3% | 1.38 | -3.70% | - | CCI(8) daily |
 | EMABounce | ETH | 4h | +24.8% | 0.95 | -6.31% | 168% | EMA50 bounce |
 
@@ -57,8 +92,8 @@ python -m DevAntsa_Lab.live_trading.engine.main_loop
 | PanicSweepOpt | BTC | 4h | +26.6% | 1.17 | -5.08% | - | PanicCascade sweep-opt |
 
 ## Position Limits
-- 2 bull + 3 sideways + 3 bear = 8 max concurrent
-- Regime gate DISABLED (v11) — all strategies self-gate via SMA200
+- 3 bull + 3 sideways + 3 bear = 9 max concurrent
+- Regime gate DISABLED — all strategies self-gate via SMA200
 - Binance one-way mode: opposite directions on same asset blocked
 - Signal priority: Bull > Sideways > Bear on same asset
 
@@ -66,7 +101,7 @@ python -m DevAntsa_Lab.live_trading.engine.main_loop
 
 ### Per-Trade Risk
 - Global risk scale: 0.85 (15% portfolio-level haircut on ALL risk)
-- Per-strategy risk scale: ElasticMultiSignal 0.65x (SOL volatility)
+- Per-strategy risk scale: ElasticMultiSignal 0.65x, CrossAssetBTCSignal 0.65x (SOL volatility)
 - Per-signal risk via Signal.metadata["risk_pct"] (multi-signal strategies)
 - Fallback risk from STRATEGY_RISK_OVERRIDES (0.5%-2.0%)
 
@@ -116,9 +151,18 @@ python -m DevAntsa_Lab.live_trading.engine.main_loop
 - **Plan:** Demo validate first (20-30+ trades), then buy challenge
 
 ## Current Stage
-Stage 2: Demo validation with Portfolio v11 (walk-forward validated, sweep-optimized).
-Running on Binance Futures Demo. Need 20-30+ trades before prop firm.
-Dashboard live at localhost:8502 for visual monitoring.
+Stage 2: Demo validation with Portfolio v12 (upgraded 2026-03-11).
+Running 24/7 on Hetzner Cloud (65.109.143.110) against Binance Futures Demo.
+Dashboard runs locally on-demand via `run_dashboard.sh` (syncs data from server).
+Need 20-30+ trades before prop firm.
+PENDING: Remove ElasticMultiSignal after all its open trades close.
+
+### Live Trading Log
+| # | Date | Strategy | Asset | Dir | Entry | Exit | P&L | Reason |
+|---|------|----------|-------|-----|-------|------|-----|--------|
+| 1 | 2026-03-09 | ElasticMultiSignal | SOL | LONG | $85.10 | $85.52 | +$5.15 (+0.49%) | TRAILING_STOP |
+
+**Equity:** $5,004.20 | **Trades:** 1W/0L | **Total P&L:** +$4.20 (+0.08%)
 
 ## Portfolio History
 - v1 (2026-02): 3 bull + 2 bear + 3 sideways. Hit kill switch after 5 losing days.
@@ -126,3 +170,4 @@ Dashboard live at localhost:8502 for visual monitoring.
 - v10 (2026-02-21): 6 bull + 9 bear, sweep-optimized, MC validated. Bull S=1.25, Bear S=1.19.
 - v10 fixes (2026-02-23): Fill confirmation, exchange safety hardening (8 bugs fixed).
 - v11 (2026-03-05): 2 bull + 3 sideways + 3 bear. 3-regime system. Walk-forward validated. DD-budget leverage. Portfolio-level safety caps. GLOBAL_RISK_SCALE=0.85. Multi-signal strategies with per-signal risk.
+- v12 (2026-03-11): 3 bull + 3 sideways + 3 bear. CrossAssetBTCSignal replaces MultiSignalCCI (adds BTC cross-asset signal, WF 90.5%). EhlersInstantTrend replaces ElasticMultiSignal (Ehlers DSP, S=1.86). VolumeWeightedTSMOM added as 3rd bull slot (S=1.84, WF 93%). SOL exposure cap bumped to 8%.
