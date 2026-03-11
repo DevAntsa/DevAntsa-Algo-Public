@@ -284,7 +284,11 @@ class BinanceExecutor:
             })
 
         df = pd.DataFrame(rows)
-        # Binance returns oldest-first — already chronological
+        # Binance returns oldest-first — already chronological.
+        # Drop the last row: it's the in-progress candle (not yet closed).
+        # Strategies must evaluate on CLOSED bars only, matching backtests.
+        if len(df) > 1:
+            df = df.iloc[:-1].reset_index(drop=True)
         return df
 
     def get_ticker(self, symbol: str) -> Dict:
