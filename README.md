@@ -11,14 +11,16 @@
 <p align="center">
   <img src="https://img.shields.io/badge/framework-BYOS-blue" alt="Bring Your Own Strategies">
   <img src="https://img.shields.io/badge/regimes-bull%20%2B%20sideways%20%2B%20bear-green" alt="Bull + Sideways + Bear">
-  <img src="https://img.shields.io/badge/exchange-Binance%20Futures-yellow" alt="Binance Futures">
+  <img src="https://img.shields.io/badge/exchange-Bybit%20Futures-yellow" alt="Bybit Futures">
   <img src="https://img.shields.io/badge/deploy-cloud%20VPS-red" alt="Cloud VPS">
   <img src="https://img.shields.io/badge/python-3.11-blue" alt="Python 3.11">
 </p>
 
 ---
 
-Automated crypto futures trading framework with regime-aware execution, walk-forward validated risk management, and a full live trading infrastructure. Built for prop firm trading on Crypto Fund Trader ($200K accounts via Bybit API).
+Automated crypto futures trading framework with regime-aware execution, walk-forward validated risk management, and full live trading infrastructure. Built for prop firm trading ($200K accounts via Bybit USDT Perpetual Futures API).
+
+**Portfolio v12: Sharpe 2.23, +808% return, 10 strategies, 3 regimes, alt-data integration.**
 
 **Strategy implementations are proprietary. This repo provides the full trading infrastructure -- bring your own strategies.**
 
@@ -65,8 +67,9 @@ DevAntsa_Lab/
 |   |   |-- regime_gate.py     # BTC EMA-50 slope classifier
 |   |   |-- position_manager.py
 |   |   `-- conflict_resolver.py
-|   |-- execution/              # Binance Futures API executor
-|   |   `-- binance_executor.py # Fill verification, position reconciliation
+|   |-- execution/              # Exchange API executors
+|   |   |-- binance_executor.py # Binance Futures (demo)
+|   |   `-- bybit_executor.py   # Bybit V5 USDT Perpetuals (live)
 |   |-- strategies/             # Strategy implementations
 |   |   |-- base.py             # StrategyBase + indicator library
 |   |   `-- example_sma_crossover.py  # Example strategy template
@@ -121,39 +124,57 @@ Then register it:
 
 See `strategies/example_sma_crossover.py` for a complete 250-line working example with adaptive trailing stops.
 
-## Portfolio v11 Results (Proprietary Strategies)
+## Portfolio v12 Results (Proprietary Strategies)
 
-The proprietary strategies deployed on this framework achieved the following on 5-year backtests (Jan 2021 - Feb 2026):
+10-strategy portfolio backtested on 5-year data (Jan 2021 - Feb 2026) with full portfolio management: position limits, exposure caps, risk sizing, conflict resolution, trailing stops, partial closes.
 
-### Bull LONG (2 strategies)
+### Combined Portfolio Performance
 
-| Strategy | Asset | Return | Sharpe | Max DD | WF Ratio |
-|----------|-------|--------|--------|--------|----------|
-| ElasticMultiSignal | SOL-4h | +201.0% | 1.61 | -8.53% | 85% |
-| DonchianModern | BTC-4h | +58.0% | 1.35 | -5.60% | 103% |
+| Metric | Value |
+|--------|-------|
+| **Sharpe Ratio** | **2.23** |
+| **Total Return** | **+808%** ($200K -> $1.82M) |
+| **Max Drawdown** | -12.56% |
+| **Trades** | 1,030 |
+| **Win Rate** | 55.1% |
+| **Profit Factor** | 1.76 |
+| **Every year profitable** | 2021-2026 |
+
+Monte Carlo validated (5,000 simulations): median DD -10.20%, 95th worst DD -14.92%.
+
+### Bull LONG (4 strategies)
+
+| Strategy | Asset | Timeframe | Data |
+|----------|-------|-----------|------|
+| DonchianModern | BTC | 4h | OHLCV |
+| EhlersInstantTrend | SOL | 4h | OHLCV |
+| VolumeWeightedTSMOM | SOL | 4h | OHLCV |
+| FundingMomentumLong | ETH | 4h | Alt-data (funding rates) |
 
 ### Sideways LONG (3 strategies)
 
-| Strategy | Asset | Return | Sharpe | Max DD | WF Ratio |
-|----------|-------|--------|--------|--------|----------|
-| MultiSignalCCI | SOL-4h | +135.3% | 1.92 | -3.88% | 85% |
-| DailyCCI | SOL-D | +41.3% | 1.38 | -3.70% | -- |
-| EMABounce | ETH-4h | +24.8% | 0.95 | -6.31% | 168% |
+| Strategy | Asset | Timeframe | Data |
+|----------|-------|-----------|------|
+| CrossAssetBTCSignal | SOL | 4h | OHLCV + cross-asset |
+| DailyCCI | SOL | Daily | OHLCV |
+| EMABounce | ETH | 4h | OHLCV |
 
 ### Bear SHORT (3 strategies)
 
-| Strategy | Asset | Return | Sharpe | Max DD |
-|----------|-------|--------|--------|--------|
-| ExitMicroTune | ETH-4h | +75.4% | 1.22 | -6.53% |
-| BCDExitTune | SOL-4h | -- | 1.0+ | -5.00% |
-| PanicSweepOpt | BTC-4h | +26.6% | 1.17 | -5.08% |
+| Strategy | Asset | Timeframe | Data |
+|----------|-------|-----------|------|
+| ExitMicroTune | ETH | 4h | OHLCV |
+| BCDExitTune | SOL | 4h | OHLCV |
+| PanicSweepOpt | BTC | 4h | OHLCV |
 
-### v11 Key Features
-- 3-regime system (bull/sideways/bear) with self-gating via SMA200
+### v12 Key Features
+- 10 strategies across 3 regimes (bull/sideways/bear) with self-gating
 - Walk-forward validated: all strategies WF > 70%
-- DD-budget leverage: only low-DD strategies get >1x leverage
+- Alt-data integration: Bybit funding rates for derivatives sentiment
+- Cross-asset signals: BTC recovery patterns predict SOL upside
+- Optimized risk allocation with surgical per-strategy risk scaling
 - Portfolio-level safety: per-asset exposure caps, aggregate risk cap
-- Multi-signal portfolio per strategy with per-signal risk sizing
+- Monte Carlo risk validation (5,000 simulations)
 
 ## RBI Agent System
 
@@ -211,7 +232,7 @@ streamlit run DevAntsa_Lab/live_trading/dashboard.py
 ## Tech Stack
 
 - **Python 3.11** with backtesting.py, pandas, pandas_ta, numpy
-- **Binance Futures API** (demo + live)
+- **Bybit V5 API** (USDT Perpetual Futures) + Binance Futures (demo)
 - **Hetzner Cloud / any VPS** for 24/7 deployment (~$8/month)
 - **systemd** for process management
 - **Streamlit + Plotly + TradingView** for dashboard
