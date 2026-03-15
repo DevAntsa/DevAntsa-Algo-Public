@@ -241,5 +241,11 @@ streamlit run DevAntsa_Lab/live_trading/dashboard.py
 ---
 
 <p align="center">
+  <a href="https://open.spotify.com/playlist/2x8w8n7ZXrLnaM3hUHw24H?si=890b85a62330461c">
+    <img src="https://img.shields.io/badge/Quant%20Tunes-%231DB954?style=for-the-badge&logo=spotify&logoColor=white" alt="Quant Tunes">
+  </a>
+</p>
+
+<p align="center">
   <sub>Built by DevAntsa | Systematic crypto trading</sub>
 </p>
