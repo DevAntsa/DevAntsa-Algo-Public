@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+title: "DevAntsa Lab — Systematic Crypto Futures Framework"
+message: "If you reference this framework, please cite it."
+type: software
+authors:
+  - given-names: DevAntsa
+    family-names: ""
+    website: "https://github.com/DevAntsa"
+repository-code: "https://github.com/DevAntsa/DevAntsa-Algo-Public"
+abstract: >-
+  A production-grade systematic crypto futures trading framework with
+  regime-aware strategy gating, multi-layer risk controls (per-strategy,
+  per-asset, aggregate, account), drawdown-modulated feedback risk
+  scaling, walk-forward validation tooling, and live execution against
+  Bybit V5 USDT Perpetual Futures. Includes the RBI (Research-Backtest-
+  Iterate) AI strategy factory.
+keywords:
+  - algorithmic-trading
+  - quantitative-finance
+  - crypto-futures
+  - bybit
+  - backtesting
+  - walk-forward-validation
+  - portfolio-management
+  - risk-management
+  - prop-trading
+license: "LicenseRef-Proprietary"
+version: "0.1.0"
+date-released: "2026-05-03"

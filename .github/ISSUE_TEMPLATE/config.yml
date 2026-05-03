@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Strategy edge / proprietary parameter requests
+    url: https://github.com/DevAntsa
+    about: Strategy implementations and parameters are not public. Don't open an issue asking for them.
+  - name: Trading advice
+    url: https://github.com/DevAntsa
+    about: This framework is published as infrastructure. Trading decisions are your own responsibility.
