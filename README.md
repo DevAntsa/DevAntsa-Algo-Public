@@ -1,12 +1,8 @@
 <p align="center">
-  <img src="DevAntsa.png" width="160" alt="DevAntsa Lab">
+  <img src="assets/logo.png" width="320" alt="DevAntsa Lab">
 </p>
 
-<h1 align="center">DevAntsa Lab</h1>
-
-<p align="center">
-  <strong>Systematic crypto futures framework. Live on a $200K prop account.</strong>
-</p>
+<h3 align="center">Systematic crypto futures framework. Live on a $200K prop account.</h3>
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white" alt="Python 3.11">
