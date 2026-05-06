@@ -4,8 +4,12 @@ Base Strategy Class + Indicator Helpers
 All regime strategies inherit from StrategyBase.
 Indicator functions use raw pandas/numpy (NOT pandas_ta) for exact backtest equivalence.
 
-Provides: ATR, EMA, RSI, ADX, ADX+DI, BB, momentum, ROC, TRIX, TSI, MFI,
-          percentile rank, and Wilder's smoothing variants.
+Portfolio v10 indicators — copied verbatim from portfolio source files:
+    Bull: B16_SteepeningSlopeBreakout, T10_DualROCAlignment, T09_DirectionalIgnition,
+          T07_ATRExpansionBreakout, B14_DIBreakoutPyramid, B17_TripleMomentum
+    Bear: StructuralFade, BearishLowerHigh, AccelBreakdown, EMARejectionADX,
+          MFIDistribution, PanicAcceleration, ExpansionBreakdown,
+          WorseningMomentum, ExpandingBodyBear
 """
 
 from __future__ import annotations
@@ -311,5 +315,14 @@ class StrategyBase:
     def calculate_trail(self, df: pd.DataFrame, position) -> Optional[float]:
         """
         Return updated trailing-stop price, or None if no update needed.
+        """
+        return None
+
+    # -- Lifecycle hooks ----------------------------------------------------
+
+    def on_position_closed(self, asset: str, exit_time) -> None:
+        """
+        Called by main_loop after a position for this strategy is closed.
+        Default no-op; v15 strategies with cooldown semantics override.
         """
         return None

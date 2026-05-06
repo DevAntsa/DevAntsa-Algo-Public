@@ -2,6 +2,28 @@
 
 All notable changes to this framework. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — 2026-05-06
+
+Framework expansion to support multi-slot portfolio additions behind config flags. The internal v15 portfolio expansion (5 new strategy slots) is wired into this framework but the strategy implementations remain proprietary.
+
+### Added
+- **Lifecycle hook** `StrategyBase.on_position_closed(asset, exit_time)` — called by main_loop after every exit (normal exit, graduated close-all, kill switch). Strategies override to track per-asset cooldown timers.
+- **Conditional strategy registration** in `signal_engine.py` — feature-flag pattern lets new strategies be wired into the engine while default-OFF, allowing safe staged rollouts. Existing v12 baseline behavior preserved bit-for-bit when all new flags are OFF.
+- **On-chain metrics data feed** (`data_feeds/onchain_metrics.py`) — fetches BTC active addresses, transaction count, hash rate, mempool size, transaction fees from the public blockchain.com API plus DEX volume from DefiLlama. Daily resolution, 12h TTL cache, fail-safe to stale cache on outage. Generic data feed; consumer strategies are proprietary.
+- **Multi-account entry jitter** (`risk/multi_account_jitter.py`) — `ACCOUNT_INDEX` env var routes per-account entry-time offsets so simultaneous fills across N accounts get N×jitter spacing. Mitigates correlated-fill alpha haircut when running the same strategy slate across multiple prop firm accounts.
+- **Per-slot tripwire monitor** (`risk/v15_tripwires.py`) — counts entries per strategy in a rolling window, compares against expected monthly fire counts, surfaces alerts on >2× over- or <0.5× under-firing during the first-month monitoring window.
+- **Auto-applied portfolio limits** in `config.py` — when any new-slot flag flips True, MAX_TOTAL_POSITIONS, MAX_AGGREGATE_EXPOSURE_PCT, and MAX_POSITIONS_PER_REGIME widen automatically to accommodate the expanded slate.
+
+### Validated
+- Internal v15 portfolio backtest gauntlet 8/9 PASS at portfolio level. Sharpe 2.23 → 3.03, Return +808% → +1083%, Max DD -12.56% → -11.00% (better) over the same 5-year window. Metrics are backtest-only; per the framework's R&D precision-review discipline, deploy ships at 50% sizing with conservative ramp protocol.
+- 33/33 smoke tests PASS across new strategy ports (tests assert framework integration: indicator population, signal direction, cooldown gating, exit logic, trailing-stop direction-awareness).
+- v12 baseline behavior verified bit-for-bit unchanged when v15 flags are OFF (live deploy preserved an open production position through restart).
+
+### Notes
+- All v15 strategy implementations remain in the proprietary repo; the public framework ships the hook surface, the data feed, and the configuration scaffolding only
+- Default config: all new flags OFF — pull this release into a v12 deployment without behavior change
+- Per the project's deploy discipline, full-sizing ramp requires either F2 simulator confirmation (bar-by-bar unrealized DD tracking) or 90 days of live data with no -8% portfolio drawdown breach
+
 ## [0.1.0] — 2026-05-03
 
 First public tagged release. The framework matches the v12 portfolio that was deployed live to a Crypto Fund Trader $200K prop account on 2026-04-04.
