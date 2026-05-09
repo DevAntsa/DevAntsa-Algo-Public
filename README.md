@@ -75,7 +75,7 @@ A production trading framework, not a backtest demo. The repo ships the full liv
                           │                     └──────────┘                  │
                           ▼                          │                        ▼
                     Bull strategies            Sideways strategies      Bear strategies
-                    (4 LONG)                   (3 LONG range)           (3 SHORT)
+                    (11 LONG)                  (10 LONG range)          (4 SHORT)
                           │                          │                        │
                           └──────────────┬───────────┴────────────────────────┘
                                          ▼
@@ -88,6 +88,8 @@ A production trading framework, not a backtest demo. The repo ships the full liv
                               │   • per-asset cap    │
                               │   • aggregate cap    │
                               │   • DD-Mod feedback  │
+                              │   • multi-account    │
+                              │     jitter (CB70)    │
                               │   • graduated halt   │
                               └──────────┬───────────┘
                                          │
