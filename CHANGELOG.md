@@ -2,6 +2,34 @@
 
 All notable changes to this framework. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] — 2026-05-10
+
+Multi-account framework + SMC strategy class + sizing-scaler infrastructure. Internal v15+SMC stack now live across two CFT prop accounts ($300K combined effective capital). Strategy implementations remain proprietary.
+
+### Added
+- **StrategyBase adapter pattern** (`strategies_smc/_adapters.py`) — wraps R&D-format strategy engines into the StrategyBase interface that signal_engine expects. Demonstrates how to integrate a strategy whose detection logic uses a different API surface (e.g., AI-generated R&D output) without rewriting the engine.
+- **Per-cell config-flag gating** — same conditional-registration pattern from v15, extended for SMC strategy class (3 cells, individual flags + master enable).
+- **State path env override** — `STATE_FILE` and `TRADE_LOG_FILE` in config.py now read from env vars with fallback to canonical paths. Enables multi-account deployments where each loop instance writes to its own state.json / trades.csv.
+- **Multi-account systemd service template** (`scripts/devantsa-loop-acct2.service.template`) — example second-instance service file showing env-var pattern for parallel deployment with separate API keys, ACCOUNT_INDEX, state files.
+- **Pulse-deep audit upgrade** — added SMC strategy registration check, count-mismatch detection (catches half-flipped flag state), and 5 backup file presence checks (revert-path validation).
+- **Telegram account labeling** — `ACCOUNT_INDEX` env var prefixes every alert with `[Acct #N]` so multiple instances can share one bot/chat without confusion.
+
+### Validated
+- v15+SMC stack live across two parallel accounts (Account #1 $200K + Account #2 $100K = $300K). Both running same code, scaled risk-pct per equity, separate state/trade logs, 1-second jitter between entries.
+- 12-check pre-flight audit passes for both accounts (SMC registration, real-data check_entry, exit/trail/cooldown logic, state freshness, env config integrity).
+- Multi-account memory footprint: 56 MB per loop instance (linear scaling, ~50 instances fit on a single CPX22).
+- Methodology layer: 13 banked R&D rules now in production. Notably Rule 11 (pre-deploy regime + correlation checks), Rule 12 (vision-filter blind validation — falsified one false-positive +39% Sharpe overlay before integration), Rule 13 (launch-regime sample bias — first 30-90 days of any new account is regime-conditional, not random).
+
+### Changed
+- Risk architecture documented as 5 layers (added multi-account dispersion as 5th layer)
+- Aggregate exposure cap auto-applied when v15 flags enabled: 15% → 18%
+- README updated to reflect 22 production slots + 3 SMC cells = 25 total active strategy classes
+
+### Notes
+- All strategy implementations remain in the proprietary repo
+- Default config: all v15 + SMC + scaler flags OFF — pull this release into a v12 deployment without behavior change
+- Per ramp discipline, full-sizing (100% risk-pct) requires F2 simulator confirmation OR 90 days clean live OR per-slot tripwire-green 30 days
+
 ## [0.2.0] — 2026-05-06
 
 Framework expansion to support multi-slot portfolio additions behind config flags. The internal v15 portfolio expansion (5 new strategy slots) is wired into this framework but the strategy implementations remain proprietary.
