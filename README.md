@@ -245,7 +245,7 @@ Net effect: combined fills approximate a TWAP rather than a single market sweep.
 
 ## Methodology Layer (Validated R&D Rules)
 
-The framework's value isn't just the code — it's the validated rules that prevent false-positive deploys. **13 methodology rules banked through 100+ R&D batches:**
+The framework's value isn't just the code — it's the validated rules that prevent false-positive deploys. **20+ methodology rules banked through 130+ R&D batches:**
 
 | Rule | What it catches |
 |------|----------------|
@@ -256,6 +256,13 @@ The framework's value isn't just the code — it's the validated rules that prev
 | **Rule 11** | Pre-deploy regime + correlation checks (per-year + concurrent stop-out) |
 | **Rule 12** | Vision-filter blind validation (catches outcome-conditioned rubrics) |
 | **Rule 13** | Launch-regime sample bias (first 30-90 days is regime-conditional, not random) |
+| **All-years profitable** | HARD pre-filter — every year in sample must be profitable (4/6 fails) |
+| **Calmar floor** | HARD pre-filter — Total Return % / \|Max DD %\| ≥ 10 (required at funding cap) |
+| **Sharpe floor** | HARD pre-filter — annualized Sharpe ≥ 2.0 |
+| **Threshold reachability** | Pre-registered Z-thresholds must be reachable against bounded/skewed proxies |
+| **Overlay Δ-gate** | Overlays inherit baseline alpha — require Δ-Sharpe≥0, Δ-Return≥0, Δ-DD≤0 |
+| **Exit anchor consistency** | Target + stop must share unit type (mixed pct + ATR creates vol-regime imbalance) |
+| **Cross-venue timing** | Multi-venue daily strats must bar-sensitivity test to expose time-travel leaks |
 | Trade-cum invalidity | DD-Mod variants must use bar-level simulation, not trade-cumulative |
 | Cell-size principle | Cells > 25% of trades behave like global scalers (target < 15%) |
 | Asymmetric compounding | Up-scalers compound 3× via equity feedback; down-scalers don't |
