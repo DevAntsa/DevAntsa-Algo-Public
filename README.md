@@ -71,15 +71,15 @@ A production trading framework, not a backtest demo. The repo ships the full liv
        (1m / 4h / 1d)      │  alt-data   │            │
                            └─────────────┘            ▼
                                                 ┌──────────┐
-                          ┌──────── Bull ◀──────│ classify │──────▶ Bear ────┐
-                          │                     └──────────┘                  │
-                          ▼                          │                        ▼
-                    Bull strategies            Sideways strategies      Bear strategies
-                    (11 LONG)                  (10 LONG range)          (4 SHORT)
-                          │                          │                        │
-                          └──────────────┬───────────┴────────────────────────┘
+                          ┌──────── Bull ◀──────│ classify │──────▶ Bear ─────┐
+                          │                     └──────────┘                   │
+                          ▼                          │                         ▼
+                   Bull strategies          Sideways strategies         Bear strategies
+                      (11 LONG)               (10 LONG range)              (4 SHORT)
+                          │                          │                         │
+                          └──────────────┬───────────┴─────────────────────────┘
                                          ▼
-                                  Conflict resolver
+                                 Conflict resolver
                                          │
                                          ▼
                               ┌──────────────────────┐
@@ -94,10 +94,10 @@ A production trading framework, not a backtest demo. The repo ships the full liv
                               └──────────┬───────────┘
                                          │
                                          ▼
-                                Bybit V5 executor
+                                 Bybit V5 executor
                                          │
                                          ▼
-                              Trailing stop + partial close
+                           Trailing stop + partial close
 ```
 
 ## Architecture
