@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <em>5-year walk-forward backtest, Jan 2021 → Feb 2026. Every year profitable. Live deployed.</em>
+  <em>5-year walk-forward backtest, Jan 2021 → May 2026. Every full year profitable. Live deployed.</em>
 </p>
 
 <table align="center">
@@ -38,15 +38,15 @@
   <td align="center"><sub>MC P99 DD</sub><br><strong>-53.69%</strong></td>
 </tr>
 <tr>
-  <th colspan="6" align="center">Portfolio v12 (initial release, 2026-05) — 10 slots, baseline</th>
+  <th colspan="6" align="center">Portfolio v12 (refreshed 2026-05-24) — 10 slots, baseline</th>
 </tr>
 <tr>
-  <td align="center"><sub>SHARPE</sub><br><strong>2.23</strong></td>
-  <td align="center"><sub>RETURN</sub><br><strong>+808%</strong></td>
-  <td align="center"><sub>MAX DD</sub><br><strong>-12.56%</strong></td>
-  <td align="center"><sub>WIN RATE</sub><br><strong>55.1%</strong></td>
-  <td align="center"><sub>PROFIT FACTOR</sub><br><strong>1.76</strong></td>
-  <td align="center"><sub>TRADES</sub><br><strong>1,030</strong></td>
+  <td align="center"><sub>SHARPE</sub><br><strong>2.03</strong></td>
+  <td align="center"><sub>RETURN</sub><br><strong>+713%</strong></td>
+  <td align="center"><sub>MAX DD</sub><br><strong>-14.90%</strong></td>
+  <td align="center"><sub>WIN RATE</sub><br><strong>54.1%</strong></td>
+  <td align="center"><sub>PROFIT FACTOR</sub><br><strong>1.59</strong></td>
+  <td align="center"><sub>TRADES</sub><br><strong>1,096</strong></td>
 </tr>
 </table>
 
