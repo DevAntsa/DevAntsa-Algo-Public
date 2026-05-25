@@ -920,14 +920,14 @@ class MyStrategy(Strategy):
 
 if __name__ == "__main__":
     import sys
-    data = pd.read_csv(r'c:\\Users\\anton\\MoneyGlich\\moon-dev-ai-agents\\src\\data\\{DATA_FOLDER}\\BTC-USD-4h.csv')
+    data = pd.read_csv(r'<your-path>\\MoneyGlich\\moon-dev-ai-agents\\src\\data\\{DATA_FOLDER}\\BTC-USD-4h.csv')
     data['datetime'] = pd.to_datetime(data['datetime'])
     data = data.set_index('datetime')
     data.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
     bt = Backtest(data, MyStrategy, cash=1_000_000, commission=0.002)
     stats = bt.run()
     print(stats)
-    sys.path.append(r'c:\\Users\\anton\\MoneyGlich\\moon-dev-ai-agents\\src\\agents')
+    sys.path.append(r'<your-path>\\MoneyGlich\\moon-dev-ai-agents\\src\\agents')
     from multi_data_tester import test_on_all_data
     test_on_all_data(MyStrategy, 'MyStrategy', regime='{CURRENT_REGIME}', verbose=False)
 ```
@@ -1263,13 +1263,13 @@ CAUSE: File paths with \\U (like \\Users) interpreted as Unicode escape sequence
 
 WRONG CODE:
 ```python
-data = pd.read_csv('c:\\Users\\anton\\MoneyGlich\\moon-dev-ai-agents\\src\\data\\rbi_regime_bear\\BTC-USD-1h.csv')
+data = pd.read_csv('<your-path>\\MoneyGlich\\moon-dev-ai-agents\\src\\data\\rbi_regime_bear\\BTC-USD-1h.csv')
 # ERROR: (unicode error) 'unicodeescape' codec can't decode bytes in position 2-3: truncated \\UXXXXXXXX escape
 ```
 
 CORRECT FIX - Use raw string (r prefix):
 ```python
-data = pd.read_csv(r'c:\\Users\\anton\\MoneyGlich\\moon-dev-ai-agents\\src\\data\\rbi_regime_bear\\BTC-USD-1h.csv')
+data = pd.read_csv(r'<your-path>\\MoneyGlich\\moon-dev-ai-agents\\src\\data\\rbi_regime_bear\\BTC-USD-1h.csv')
 ```
 
 ALWAYS use raw strings for file paths on Windows:

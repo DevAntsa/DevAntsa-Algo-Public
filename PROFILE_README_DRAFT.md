@@ -34,10 +34,10 @@ copy it across, you can delete this file or keep it as a backup.
 
 ### Currently
 
-- 🟢 **Live** on a Crypto Fund Trader $200K prop account, Bybit V5, 10 strategies, 3 regimes, running 24/7 on a single Hetzner box.
+- 🟢 **Live** on a Crypto Fund Trader prop account, Bybit V5, 10 strategies, 3 regimes, running 24/7 on a single Hetzner box.
 - 🧪 Running R&D batches through an in-house **Research → Backtest → Iterate** pipeline. 76+ batches, 229+ candidate strategies tested.
 - 📊 Tracking macro / FNG / liquidation-cascade / cross-asset signals as portfolio overlays. The portfolio profits in *recovery* regimes, not euphoric momentum.
-- 🛠️ Building toward a multi-account stack: CFT $300K + HyroTrader $200K + BrightFunded $400K → ~$900K funded ceiling.
+- 🛠️ Building toward a multi-account, multi-firm prop stack.
 
 ### What I work on
 

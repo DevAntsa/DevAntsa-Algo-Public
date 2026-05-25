@@ -296,7 +296,7 @@ The BEAR agent is production-ready:
 ### To Run Batch #8:
 
 ```bash
-cd C:\Users\anton\MoneyGlich\moon-dev-ai-agents
+cd <your-path>\MoneyGlich\moon-dev-ai-agents
 conda activate tflow
 python src/agents/rbi_agent_pp_multi_devantsa_bear.py --regime BEAR
 ```

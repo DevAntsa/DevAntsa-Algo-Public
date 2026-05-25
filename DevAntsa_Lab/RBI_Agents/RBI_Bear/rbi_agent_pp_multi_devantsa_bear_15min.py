@@ -1155,7 +1155,7 @@ class BearShortStrategy(Strategy):
 if __name__ == "__main__":
     import sys
 
-    data = pd.read_csv(r'c:\\Users\\anton\\MoneyGlich\\moon-dev-ai-agents\\DevAntsa_Lab\\RBI_Agents\\RBI_Bear\\rbi_regime_bear\\BTC-USD-15m.csv')
+    data = pd.read_csv(r'<your-path>\\MoneyGlich\\moon-dev-ai-agents\\DevAntsa_Lab\\RBI_Agents\\RBI_Bear\\rbi_regime_bear\\BTC-USD-15m.csv')
     data['datetime'] = pd.to_datetime(data['datetime'])
     data = data.set_index('datetime')
     data.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
@@ -1169,7 +1169,7 @@ if __name__ == "__main__":
     print(stats)
     print("="*80 + "\\n")
 
-    sys.path.append(r'c:\\Users\\anton\\MoneyGlich\\moon-dev-ai-agents\\DevAntsa_Lab\\RBI_Agents\\RBI_Bear')
+    sys.path.append(r'<your-path>\\MoneyGlich\\moon-dev-ai-agents\\DevAntsa_Lab\\RBI_Agents\\RBI_Bear')
     from multi_data_tester_15min import test_on_all_data
 
     print("="*80)
@@ -1219,8 +1219,8 @@ CRITICAL: NO EMOJIS & USE RAW STRINGS - WINDOWS COMPATIBILITY!
    RIGHT: print("MOON LONG...")              <- WORKS
 
 2. ALWAYS use raw strings (r prefix) for file paths:
-   WRONG: data = pd.read_csv('c:\\Users\\anton\\...')  <- Unicode escape error
-   RIGHT: data = pd.read_csv(r'c:\\Users\\anton\\...')  <- Works
+   WRONG: data = pd.read_csv('<your-path>\\...')  <- Unicode escape error
+   RIGHT: data = pd.read_csv(r'<your-path>\\...')  <- Works
 
 Remove ALL emojis and FIX ALL file paths in your optimized code!
 ========================================================================
@@ -1559,13 +1559,13 @@ CAUSE: File paths with \\U (like \\Users) interpreted as Unicode escape sequence
 
 WRONG CODE:
 ```python
-data = pd.read_csv('c:\\Users\\anton\\MoneyGlich\\moon-dev-ai-agents\\DevAntsa_Lab\\RBI_Agents\\RBI_Bear\\rbi_regime_bear\\BTC-USD-15m.csv')
+data = pd.read_csv('<your-path>\\MoneyGlich\\moon-dev-ai-agents\\DevAntsa_Lab\\RBI_Agents\\RBI_Bear\\rbi_regime_bear\\BTC-USD-15m.csv')
 # ERROR: (unicode error) 'unicodeescape' codec can't decode bytes in position 2-3: truncated \\UXXXXXXXX escape
 ```
 
 CORRECT FIX - Use raw string (r prefix):
 ```python
-data = pd.read_csv(r'c:\\Users\\anton\\MoneyGlich\\moon-dev-ai-agents\\DevAntsa_Lab\\RBI_Agents\\RBI_Bear\\rbi_regime_bear\\BTC-USD-15m.csv')
+data = pd.read_csv(r'<your-path>\\MoneyGlich\\moon-dev-ai-agents\\DevAntsa_Lab\\RBI_Agents\\RBI_Bear\\rbi_regime_bear\\BTC-USD-15m.csv')
 ```
 
 ALWAYS use raw strings for file paths on Windows:

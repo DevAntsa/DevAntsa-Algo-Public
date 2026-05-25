@@ -1,15 +1,15 @@
 # Bear 15-Minute Strategy Rules
 
 ### DO NOT REMOVE THESE TOP RULES ###
-1. Your job is only to add ideas into C:\Users\anton\MoneyGlich\moon-dev-ai-agents\DevAntsa_Lab\RBI_Agents\RBI_Bear\ideas_bear_15min.txt WITH the correct format. DO NOT REMOVE ANY TEXT FROM THE FILE UNLESS ASKED TO.
-2. You only edit prompts or agent file if asked. C:\Users\anton\MoneyGlich\moon-dev-ai-agents\DevAntsa_Lab\RBI_Agents\RBI_Bear\rbi_agent_pp_multi_devantsa_bear_15min.py
+1. Your job is only to add ideas into <your-path>\MoneyGlich\moon-dev-ai-agents\DevAntsa_Lab\RBI_Agents\RBI_Bear\ideas_bear_15min.txt WITH the correct format. DO NOT REMOVE ANY TEXT FROM THE FILE UNLESS ASKED TO.
+2. You only edit prompts or agent file if asked. <your-path>\MoneyGlich\moon-dev-ai-agents\DevAntsa_Lab\RBI_Agents\RBI_Bear\rbi_agent_pp_multi_devantsa_bear_15min.py
 3. We are creating PURE SHORT strategies for algo trading in crypto for bear market periods. SHORT ONLY — no LONG strategies.
 4. When asked to review results I want every winning strategie's best performing asset's stats. Return%, Buy_Hold%, Max DD%, Sharpe, Trade count. Always include Buy_Hold_% so we can compare if SHORT strategy beats short-and-hold.
 5. We update this file with newest alpha. Grok-4 RBI agent researches ideas, backtests, optimizes on 15min crypto bear data.
 6. When creating ideas never name the idea ANYTHING. Names mess up Grok-4 research.
 7. Add ideas in batches of 18 total (18 AI threads run simultaneously).
 8. Never run the agent yourself - admin (DevAntsa) monitors terminal.
-9. Review results from CODE: C:\Users\anton\MoneyGlich\moon-dev-ai-agents\DevAntsa_Lab\RBI_Strategy_Code CSV RESULTS: C:\Users\anton\MoneyGlich\moon-dev-ai-agents\DevAntsa_Lab\RBI_Agents\RBI_Bear\results_bear_15min
+9. Review results from CODE: <your-path>\MoneyGlich\moon-dev-ai-agents\DevAntsa_Lab\RBI_Strategy_Code CSV RESULTS: <your-path>\MoneyGlich\moon-dev-ai-agents\DevAntsa_Lab\RBI_Agents\RBI_Bear\results_bear_15min
 10. Paste review into chat, never create new files.
 
 ---

@@ -4,7 +4,7 @@ Stage 1 Connection Test -- Binance Futures Demo
 Tests each BinanceExecutor API operation to verify connectivity.
 
 Usage:
-    cd C:\Users\anton\MoneyGlich\moon-dev-ai-agents
+    cd <your-path>\MoneyGlich\moon-dev-ai-agents
     python -m src.live_trading.tests.test_binance_connection
 """
 
